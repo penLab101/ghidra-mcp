@@ -2247,6 +2247,14 @@ public class ProgramScriptService {
         final PrintStream originalOut = System.out;
         final PrintStream originalErr = System.err;
 
+        // Sweep leftover inline-script failures BEFORE compiling, so Ghidra
+        // stops replaying their stale compile errors on this run. Previously
+        // only runScriptInline purged; run_ghidra_script never did, so one
+        // failed inline run poisoned every later script run.
+        try {
+            purgeStaleInlineScripts(new File(System.getProperty("user.home"), "ghidra_scripts"), System.currentTimeMillis());
+        } catch (Throwable ignore) { /* purge is best-effort; never block a run */ }
+
         // Track whether we copied the script (for cleanup)
         final File[] copiedScript = {null};
 
@@ -2447,7 +2455,11 @@ public class ProgramScriptService {
                         }
                     } catch (Throwable ignore) { /* scriptWriter may be unavailable */ }
 
-                    Msg.error(this, "Script execution failed: " + scriptPath, e);
+                    // Failure is already returned to the caller via resultMsg + failure; Msg.error
+                    // on the Swing EDT raises a modal dialog that blocks the UI thread this
+                    // bridge depends on, hanging automation. Log-only instead.
+                    Msg.warn(this, "Script execution failed: " + scriptPath + ": "
+                        + e.getClass().getSimpleName() + ": " + e.getMessage());
                 } finally {
                     if (scriptMonitorHolder[0] != null) {
                         scriptMonitorHolder[0].cancel();
@@ -2552,10 +2564,12 @@ public class ProgramScriptService {
         // Use unique class name per invocation so Ghidra recompiles each time.
         // If user provides their own class, extract its name for the filename.
         String className = "McpInline_" + Long.toHexString(System.nanoTime());
+        boolean generatedName = true; // provenance: WE created this name just now
         java.util.regex.Matcher m = java.util.regex.Pattern
             .compile("public\\s+class\\s+(\\w+)").matcher(code);
         if (m.find()) {
             className = m.group(1);
+            generatedName = false; // caller-chosen name — provenance uncertain
         }
 
         // Write to ~/ghidra_scripts/ so OSGi classloader can find the source bundle
@@ -2619,10 +2633,19 @@ public class ProgramScriptService {
                 if (succeeded) {
                     // Clean run: remove the source file immediately.
                     if (!tempScript.delete()) tempScript.deleteOnExit();
+                } else if (generatedName) {
+                    // Failed run with a GENERATED McpInline_* name: provenance is
+                    // certain (we minted the name above), so delete immediately —
+                    // no oracle needed. The failed-build record Ghidra keeps for
+                    // this directory is cleared by the purge at the top of the
+                    // NEXT run; the file itself must not linger until then.
+                    if (!tempScript.delete()) tempScript.deleteOnExit();
                 } else {
-                    // Failed run: leave .java on disk for next run's pre-cleanup to remove
-                    // (which will clear Ghidra's build-state entry for it), and write an
-                    // oracle so that cleanup is instant rather than time-delayed.
+                    // Failed run with a CALLER-NAMED class: leave .java on disk for
+                    // the next run's pre-cleanup to remove (which will clear Ghidra's
+                    // build-state entry for it), and write an oracle so that cleanup
+                    // is instant rather than time-delayed. The oracle is what marks
+                    // the file as ours despite its non-generated name.
                     try {
                         File oracle = new File(scriptsDir, className + ".java_failed");
                         String failureInfo = responseHolder[0] != null
@@ -2711,39 +2734,42 @@ public class ProgramScriptService {
     @McpTool(path = "/list_scripts", description = "List available Ghidra scripts", category = "program", access = ToolAccess.READ_ONLY)
     public Response listGhidraScripts(
             @Param(value = "filter", description = "Script name filter", defaultValue = "") String filter) {
-        final AtomicReference<Map<String, Object>> resultData = new AtomicReference<>();
-        final AtomicReference<String> errorMsg = new AtomicReference<>();
-
-        try {
-            threadingStrategy.runOnUi(() -> {
-                try {
-                    resultData.set(JsonHelper.mapOf(
-                        "note", "Script listing requires Ghidra GUI access",
-                        "filter", filter != null ? filter : "none",
-                        "instructions", List.of(
-                            "To view available scripts:",
-                            "1. Open Ghidra's Script Manager (Window -> Script Manager)",
-                            "2. Browse scripts by category",
-                            "3. Use the search filter at the top"
-                        ),
-                        "common_script_locations", List.of(
-                            "<ghidra_install>/Ghidra/Features/*/ghidra_scripts/",
-                            "<user_home>/ghidra_scripts/"
-                        )
-                    ));
-                } catch (Exception e) {
-                    errorMsg.set(e.getMessage());
-                    Msg.error(this, "Error in list scripts handler", e);
-                }
-            });
-        } catch (Exception e) {
-            return Response.err("Failed to execute on Swing thread: " + e.getMessage());
+        // Enumerate the same candidate script directories the executor searches.
+        // Pure filesystem walk - no Swing access needed, so no runOnUi wrapper.
+        List<Map<String, Object>> scripts = new ArrayList<>();
+        List<String> searched = new ArrayList<>();
+        java.util.LinkedHashSet<String> seenDirs = new java.util.LinkedHashSet<>();
+        seenDirs.add(new File(System.getProperty("user.home"), "ghidra_scripts").getAbsolutePath());
+        seenDirs.add(new File("./ghidra_scripts").getAbsolutePath());
+        String ghidraInstall = System.getProperty("ghidra.install.dir", System.getenv("GHIDRA_INSTALL_DIR"));
+        if (ghidraInstall != null && !ghidraInstall.isEmpty()) {
+            File feat = new File(ghidraInstall, "Ghidra/Features");
+            File[] bundles = feat.isDirectory() ? feat.listFiles() : null;
+            if (bundles != null) for (File b : bundles) {
+                seenDirs.add(new File(b, "ghidra_scripts").getAbsolutePath());
+            }
         }
-
-        if (errorMsg.get() != null) {
-            return Response.err(errorMsg.get());
+        String needle = (filter == null || filter.isEmpty()) ? null : filter.toLowerCase(java.util.Locale.ROOT);
+        for (String dirPath : seenDirs) {
+            searched.add(dirPath);
+            File dir = new File(dirPath);
+            File[] files = dir.isDirectory() ? dir.listFiles((d, n) -> n.endsWith(".java") || n.endsWith(".py")) : null;
+            if (files == null) continue;
+            for (File f : files) {
+                String name = f.getName();
+                if (needle != null && !name.toLowerCase(java.util.Locale.ROOT).contains(needle)) continue;
+                scripts.add(JsonHelper.mapOf(
+                    "name", name,
+                    "path", f.getAbsolutePath(),
+                    "size", f.length(),
+                    "modified", new Date(f.lastModified()).toString()));
+            }
         }
-        return resultData.get() != null ? Response.ok(resultData.get()) : Response.err("Unknown failure");
+        return Response.ok(JsonHelper.mapOf(
+            "count", scripts.size(),
+            "filter", filter != null && !filter.isEmpty() ? filter : "none",
+            "searched_dirs", searched,
+            "scripts", scripts));
     }
 
     // ========================================================================

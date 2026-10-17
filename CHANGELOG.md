@@ -121,6 +121,36 @@ This project is a generic Ghidra MCP server; game-specific tooling lives elsewhe
   holds, or can check for, the real value. The other constructions, domain-object opens and
   tool-manager lookups came out clean.
 
+### Fixed — script-tool reliability: no modal dialog, universal stale-failure purge, real `list_scripts`, immediate generated-name cleanup
+
+Live-tested against a running Ghidra 12.1.2 with a loaded driver; four defects in the
+script tools surfaced and were fixed in `ProgramScriptService`:
+
+- **A failed script popped a modal Swing dialog on the EDT.** A compile/launch failure
+  reached `Msg.error(this, ...)`, which raises `DockingErrorDisplay.showErrorDialogOnSwing`
+  on the Event Dispatch Thread. The error was already fully returned in the response, so the
+  dialog only blocked the UI thread the bridge depends on, hanging automation. It is now
+  log-only (`Msg.warn`).
+- **One failed inline run poisoned every later script run.** Ghidra caches "these files
+  failed to compile" per script directory and replays the stale errors on the output of
+  every subsequent script, surviving file deletion and a restart. The purge that clears this
+  only ran from `run_script_inline`; `run_ghidra_script` never purged, so a single failed
+  inline run corrupted all later runs. `run_ghidra_script` now sweeps leftover inline-script
+  failures before compiling (best-effort, never blocking a run).
+- **`list_scripts` was a stub.** It returned "open the Script Manager" GUI instructions
+  instead of listing files, even though the executor already resolves the script
+  directories. It now walks `~/ghidra_scripts`, `./ghidra_scripts`, and every
+  `<install>/Ghidra/Features/*/ghidra_scripts`, returning
+  `{count, filter, searched_dirs, scripts:[{name, path, size, modified}]}` for `.java`/`.py`
+  with an optional case-insensitive substring filter. No Swing access needed, so the
+  `runOnUi` wrapper is gone.
+- **A failed run with a generated `McpInline_*` name lingered until the next purge.** For a
+  generated name the service's provenance is certain (it mints the name from
+  `System.nanoTime()`), so the `.java` is now deleted immediately on failure rather than
+  deferred to the next run's pre-cleanup. The oracle+defer mechanism is reserved for
+  caller-named classes, where the file's provenance is uncertain and the operator may want
+  to inspect it. New offline coverage in `ListGhidraScriptsOfflineTest` (7 tests).
+
 ### Changed — shared services on both servers (version control, lifecycle, GUI tools, batch docs)
 
 The GUI plugin and headless server still built overlapping logic in the plugin class,

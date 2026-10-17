@@ -537,3 +537,6 @@ ghidra_scripts/db.env
 
 # Local MCP client config: machine-specific paths. Copy .mcp.json.example.
 .mcp.json
+
+# Repository-local Gradle user cache for restricted build sessions.
+/.gradle-user-home/
