@@ -532,10 +532,15 @@ returns the original server documentation.
 To temporarily disable individual upstream tools, edit `DISABLED_TOOL_NAMES` in
 `python/bridge_mcp_ghidra/schema.py` and restart the bridge. Its separate
 `HIDE_OPTIONAL_TOOL_NAMES` set hides optional analysis helpers, server administration,
-project housekeeping and property-map tools; remove names there to restore them.
+project housekeeping, property-map tools and GUI window inventory; remove names
+there to restore them. It also hides `can_rename_at_address` and
+`find_next_undefined_function`, which overlap existing edit/discovery tools.
 The two sets are combined for filtering. Use exact bridge names
-before client-added prefixes such as `ghidra_`. `clear_flow_and_repair` is disabled
-by default; remove its entry to restore it. Disabled tools are excluded from
+before client-added prefixes such as `ghidra_`. The additional exclusions include
+`clear_flow_and_repair`, the unimplemented `find_dead_code` and
+`detect_crypto_constants`, diagnostic tools `mcp_schema` and `mcp_health`, and
+GUI automation tool `prompt_policy`. Remove names and restart to restore them;
+`check_connection` remains available. Disabled tools are excluded from
 registration, search and group loading, including when all tools are loaded with
 `--no-lazy`. This gate does not enable lazy loading. The same set also controls
 static bridge tools.

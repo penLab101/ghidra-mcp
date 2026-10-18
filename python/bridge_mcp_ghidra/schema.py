@@ -11,6 +11,10 @@ HIDE_OPTIONAL_TOOL_NAMES = {
     # Local computation and basic naming heuristics.
     "convert_number",
     "suggest_field_names",
+    # Overlapping discovery/preflight helpers and GUI window inventory.
+    "find_next_undefined_function",
+    "can_rename_at_address",
+    "tool_running_tools",
     # Overlapping function bundles and documentation-specific scoring.
     "analyze_function_complete",
     "analyze_for_documentation",
@@ -59,6 +63,13 @@ HIDE_OPTIONAL_TOOL_NAMES = {
 # Also applies to static bridge tools. Edit either set, then restart the bridge.
 DISABLED_TOOL_NAMES = {
     "clear_flow_and_repair",  # schema bloated + not frequently used
+    # Unimplemented analysis endpoints.
+    "find_dead_code",
+    "detect_crypto_constants",
+    # Schema/server diagnostics and specialized GUI automation.
+    "mcp_schema",
+    "mcp_health",
+    "prompt_policy",
     # All tools are loaded up front; lazy-load management is unnecessary.
     "list_tool_groups",
     "load_tool_group",

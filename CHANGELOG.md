@@ -34,6 +34,11 @@ the 235-tool schema recording); the figures above are the current ones.
 
 ### Changed — Smaller MCP tool schemas
 
+- Disabled the unimplemented `find_dead_code` and `detect_crypto_constants`,
+  schema/health diagnostics `mcp_schema` and `mcp_health`, and GUI automation
+  `prompt_policy` through `DISABLED_TOOL_NAMES`. Added `tool_running_tools`,
+  `can_rename_at_address` and `find_next_undefined_function` to
+  `HIDE_OPTIONAL_TOOL_NAMES`. `check_connection` and HTTP endpoints remain available.
 - Added a separate `HIDE_OPTIONAL_TOOL_NAMES` set in `schema.py`, combined with
   `DISABLED_TOOL_NAMES`, to hide 39 optional analysis, server-administration,
   project-housekeeping and property-map tools from the MCP surface. Remove a
