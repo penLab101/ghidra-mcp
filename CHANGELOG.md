@@ -37,10 +37,11 @@ the 235-tool schema recording); the figures above are the current ones.
 - Set `GHIDRA_MCP_SYNTHETIC_DRY_RUN=0` in the bridge's environment to stop
   appending a synthetic `dry_run` input to POST tools. The default behavior and
   tools that explicitly declare `dry_run` are preserved.
-- Clarified `run_ghidra_script` and `run_script_inline` descriptions: filename
-  lookup versus explicit paths, temporary inline sources, Java source forms,
-  `getScriptArgs()`, literal whitespace splitting, cooperative timeout and
-  output capture. Both tools document the existing rejection of `dry_run=true`.
+- Clarified script tool descriptions: existing files versus temporary inline
+  source, a working Java class template, `getScriptArgs()`, literal whitespace
+  splitting, cooperative timeout, JSON results and cached build diagnostics.
+  `list_scripts` documents filesystem discovery and filtering; use its returned
+  paths to run built-ins. Both runners document the rejection of `dry_run=true`.
 - Added a bridge-side `DISABLED_TOOL_NAMES` set in `schema.py` for temporarily
   excluding upstream tools from registration, discovery and lazy loading.
   `ghidra_clear_flow_and_repair` is disabled by default; remove its name and

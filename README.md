@@ -949,14 +949,14 @@ write the path with forward slashes.
 - `list_open_programs` - List open programs
 - `list_project_files` - List project files
 - `list_properties` - List (address, value) entries stored in a property map, with pagination
-- `list_scripts` - List available Ghidra scripts
+- `list_scripts` - List .java and .py script files on the Ghidra host, without recursion
 - `open_program` - Open program from project
 - `read_memory` - Read raw memory
 - `reanalyze` - Trigger full auto-analysis on a program
 - `remove_program_option` - Remove an option from a program option group
 - `remove_property` - Remove the value stored at a single address in a property map
-- `run_ghidra_script` - Execute a saved Ghidra script by filename or path, capturing console output
-- `run_script_inline` - Compile and run inline Java in Ghidra, capturing console output
+- `run_ghidra_script` - Run an existing Ghidra script file by filename or path
+- `run_script_inline` - Compile and run temporary Java GhidraScript code
 - `save_all_programs` - Save all open programs
 - `save_program` - Save current program
 - `set_bookmark` - Set bookmark

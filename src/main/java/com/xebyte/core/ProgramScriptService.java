@@ -2539,17 +2539,20 @@ public class ProgramScriptService {
     }
 
     @McpTool(path = "/run_script_inline", dryRun = false, method = "POST",
-            description = "Compile and run inline Java in Ghidra, capturing console output. "
-                        + "Source is temporary in ~/ghidra_scripts and deleted after success; "
-                        + "it is not saved for reuse by name. Requires GHIDRA_MCP_ALLOW_SCRIPTS=1. "
+            description = "Compile and run temporary Java GhidraScript code. "
+                        + "Source is written under the Ghidra process's ~/ghidra_scripts and deleted after success; "
+                        + "To reuse, save a separate script file "
+                        + "then call run_ghidra_script"
+                        + "Requires GHIDRA_MCP_ALLOW_SCRIPTS=1. "
                         + "dry_run=true is rejected without execution.",
             category = "program", access = ToolAccess.WRITE)
     public Response runScriptInline(
             @Param(value = "code", source = ParamSource.BODY,
-                   description = "Java statements (auto-wrapped), or full source with "
-                               + "import ghidra.app.script.GhidraScript; and one public class "
-                               + "extending GhidraScript with public void run() throws Exception. "
-                               + "Use a unique class name; existing files are not overwritten.") String code,
+                   description = "Java statements (auto-wrapped; put each import on its own line), or full source "
+                               + "using this form: import ghidra.app.script.GhidraScript; "
+                               + "public class UniqueName extends GhidraScript { "
+                               + "@Override public void run() throws Exception { println(currentProgram.getName()); } }. "
+                               + "Use no package declaration and a unique class name; existing files are not overwritten.") String code,
             @Param(value = "args", source = ParamSource.BODY, defaultValue = "",
                    description = "Whitespace-separated; not quote-aware: \"a b\" becomes two args "
                                + "with literal quotes. Read with getScriptArgs(), not an args field.") String args,
@@ -2733,17 +2736,23 @@ public class ProgramScriptService {
      * @param filter Optional filter string to match script names
      * @return JSON list of available scripts
      */
-    @McpTool(path = "/list_scripts", description = "List available Ghidra scripts", category = "program", access = ToolAccess.READ_ONLY)
+    @McpTool(path = "/list_scripts",
+            description = "List .java and .py script files on the Ghidra host, no recursion. "
+                        + "Searches ~/ghidra_scripts "
+                        + "Returns JSON {count, filter, searched_dirs, scripts: [{name, path, size, modified}]}. "
+                        + "Pass a returned path to run_ghidra_script. Listing does not verify that a script can run.",
+            category = "program", access = ToolAccess.READ_ONLY)
     public Response listGhidraScripts(
-            @Param(value = "filter", description = "Script name filter", defaultValue = "") String filter) {
+            @Param(value = "filter", description = "Case-insensitive substring of the filename; empty lists all scripts.", defaultValue = "") String filter) {
         // Enumerate the same candidate script directories the executor searches.
         // Pure filesystem walk - no Swing access needed, so no runOnUi wrapper.
         List<Map<String, Object>> scripts = new ArrayList<>();
         List<String> searched = new ArrayList<>();
         java.util.LinkedHashSet<String> seenDirs = new java.util.LinkedHashSet<>();
         seenDirs.add(new File(System.getProperty("user.home"), "ghidra_scripts").getAbsolutePath());
-        seenDirs.add(new File("./ghidra_scripts").getAbsolutePath());
-        String ghidraInstall = System.getProperty("ghidra.install.dir", System.getenv("GHIDRA_INSTALL_DIR"));
+        // seenDirs.add(new File("./ghidra_scripts").getAbsolutePath());
+        // String ghidraInstall = System.getProperty("ghidra.install.dir", System.getenv("GHIDRA_INSTALL_DIR"));
+        String ghidraInstall = null
         if (ghidraInstall != null && !ghidraInstall.isEmpty()) {
             File feat = new File(ghidraInstall, "Ghidra/Features");
             File[] bundles = feat.isDirectory() ? feat.listFiles() : null;
@@ -3580,15 +3589,18 @@ public class ProgramScriptService {
     }
 
     @McpTool(path = "/run_ghidra_script", dryRun = false, method = "POST",
-            description = "Execute a saved Ghidra script by filename or path, capturing console output. "
+            description = "Run an existing Ghidra script file by filename or path. "
+                        + "The file must already exist on the Ghidra host; use run_script_inline to write new source to the searchscope of list_scripts "
+                        + "Returns JSON {success, script_name, script_path, execution_time_seconds, "
+                        + "output_captured, console_output?};"
                         + "Requires GHIDRA_MCP_ALLOW_SCRIPTS=1. dry_run=true is rejected without execution.",
             category = "program", access = ToolAccess.WRITE)
     public Response runGhidraScriptWithCapture(
 @Param(value = "script_name", source = ParamSource.BODY,
-                   description = "Filename searched non-recursively in ~/ghidra_scripts and "
-                               + "<cwd>/ghidra_scripts (./ghidra_scripts), then tried as a path as-is. "
-                               + "Ghidra/Features/*/ghidra_scripts is not searched; supply a path for built-ins. "
-                               + "Names without a dot try .java, .py, then bare; otherwise the extension must match.") String scriptName,
+                   description = "Filename searched in ~/ghidra_scripts "
+                               + "then tried as a path as-is (no ~ expansion). Use an absolute path from list_scripts "
+                               + "for built-ins. Include .java or .py; names without a dot also try .java, .py, then bare. "
+                               + "For Java, the public GhidraScript subclass name must match the filename.") String scriptName,
             
 @Param(value = "args", source = ParamSource.BODY, defaultValue = "",
                    description = "Whitespace-separated; not quote-aware: \"a b\" becomes two args "
@@ -3631,8 +3643,8 @@ public class ProgramScriptService {
 
             String[] searchDirs = {
                 System.getProperty("user.home") + "/ghidra_scripts",
-                System.getProperty("user.dir") + "/ghidra_scripts",
-                "./ghidra_scripts"
+                // System.getProperty("user.dir") + "/ghidra_scripts",
+                // "./ghidra_scripts"
             };
 
             String[] extensions = hasExtension ? new String[]{""} : new String[]{".java", ".py", ""};

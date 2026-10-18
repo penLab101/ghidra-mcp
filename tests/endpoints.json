@@ -2144,7 +2144,7 @@
         "gui",
         "headless"
       ],
-      "description": "List available Ghidra scripts"
+      "description": "List .java and .py script files on the Ghidra host, without recursion. Searches ~/ghidra_scripts, <cwd>/ghidra_scripts and, when the installation path is known, <ghidra_install>/Ghidra/Features/*/ghidra_scripts. Returns JSON {count, filter, searched_dirs, scripts: [{name, path, size, modified}]}. Pass a returned path to run_ghidra_script. Listing does not verify that a script can run."
     },
     {
       "path": "/list_shadowed_globals",
@@ -2594,7 +2594,7 @@
         "gui",
         "headless"
       ],
-      "description": "Execute a saved Ghidra script by filename or path, capturing console output. Requires GHIDRA_MCP_ALLOW_SCRIPTS=1. dry_run=true is rejected without execution."
+      "description": "Run an existing Ghidra script file by filename or path. The file must already exist on the Ghidra host; use run_script_inline for new source. Returns JSON {success, script_name, script_path, execution_time_seconds, output_captured, console_output?}; failures always include output. Cached 'failing in previous build(s)' banners may refer to other files; check success and diagnostics for this script. Requires GHIDRA_MCP_ALLOW_SCRIPTS=1. dry_run=true is rejected without execution."
     },
     {
       "path": "/run_script_inline",
@@ -2609,7 +2609,7 @@
         "gui",
         "headless"
       ],
-      "description": "Compile and run inline Java in Ghidra, capturing console output. Source is temporary in ~/ghidra_scripts and deleted after success; it is not saved for reuse by name. Requires GHIDRA_MCP_ALLOW_SCRIPTS=1. dry_run=true is rejected without execution."
+      "description": "Compile and run temporary Java GhidraScript code. Source is written under the Ghidra process's ~/ghidra_scripts and deleted after success; failed sources may remain until the next script run. To reuse, save a separate script file and call run_ghidra_script. Returns JSON {success, console_output, error?}; compile errors prevent execution. Cached 'failing in previous build(s)' banners may refer to other files; check success and diagnostics for this script. Requires GHIDRA_MCP_ALLOW_SCRIPTS=1. dry_run=true is rejected without execution."
     },
     {
       "path": "/save_all_programs",
