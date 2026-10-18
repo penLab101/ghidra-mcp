@@ -34,6 +34,9 @@ the 235-tool schema recording); the figures above are the current ones.
 
 ### Changed — Smaller MCP tool schemas
 
+- Disabled the static lazy-load helpers (`list_tool_groups`, `load_tool_group`,
+  `unload_tool_group`, `check_tools`, `search_tools`) through `DISABLED_TOOL_NAMES`.
+  Loading behavior is unchanged; use `--no-lazy` to load all enabled tools on connection.
 - Script-listing integration checks now reject the legacy GUI-instructions
   placeholder and verify filesystem result fields, so a stale installed plugin
   cannot pass merely by returning HTTP 200.

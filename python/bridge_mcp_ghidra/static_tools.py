@@ -22,6 +22,7 @@ from .config import (
     logger,
 )
 from .server import Context, mcp
+from .schema import DISABLED_TOOL_NAMES
 from .validation import validate_server_url
 
 
@@ -792,3 +793,9 @@ def _start_auto_connect_retry(interval: float = AUTO_CONNECT_RETRY_INTERVAL_SEC)
     thread = threading.Thread(target=_loop, name="GhidraMCP-AutoConnectRetry", daemon=True)
     thread.start()
     return thread
+
+
+# Static tools do not pass through registry._register_tool_def.
+for _disabled_name in STATIC_TOOL_NAMES & DISABLED_TOOL_NAMES:
+    mcp.remove_tool(_disabled_name)
+STATIC_TOOL_NAMES.difference_update(DISABLED_TOOL_NAMES)

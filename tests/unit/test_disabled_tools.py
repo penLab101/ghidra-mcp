@@ -3,11 +3,49 @@
 import asyncio
 from copy import deepcopy
 import json
+import os
+from pathlib import Path
+import subprocess
+import sys
 
 from mcp.server.fastmcp.exceptions import ToolError
 import pytest
 
 from bridge_mcp_ghidra import registry, server, state, static_tools
+
+
+@pytest.mark.parametrize("flags, expected_lazy", [([], True), (["--lazy"], True), (["--no-lazy"], False)])
+def test_disabled_lazy_helpers_preserve_loading_flags(flags, expected_lazy):
+    # A fresh process checks the actual import-time registration, isolated from
+    # tests that replace the singleton's tool manager or connection state.
+    probe = '''
+import asyncio
+import sys
+from unittest.mock import patch
+from bridge_mcp_ghidra import cli, server, state
+from bridge_mcp_ghidra.config import STATIC_TOOL_NAMES
+from bridge_mcp_ghidra.schema import DISABLED_TOOL_NAMES
+helpers = {"list_tool_groups", "load_tool_group", "unload_tool_group", "check_tools", "search_tools"}
+assert helpers <= DISABLED_TOOL_NAMES
+assert not helpers & STATIC_TOOL_NAMES
+assert not helpers & {t.name for t in asyncio.run(server.mcp.list_tools())}
+assert "connect_instance" in STATIC_TOOL_NAMES
+assert state._lazy_mode is True
+expected_lazy = sys.argv.pop(1) == "True"
+def connect():
+    assert state._lazy_mode is expected_lazy
+    return True
+with patch.object(cli, "_auto_connect", side_effect=connect), patch.object(server.mcp, "run"):
+    cli.main()
+assert state._lazy_mode is expected_lazy
+'''
+    env = dict(os.environ, GHIDRA_MCP_LAZY="1")
+    env["PYTHONPATH"] = str(Path(__file__).resolve().parents[2] / "python")
+    result = subprocess.run(
+        [sys.executable, "-c", probe, str(expected_lazy), *flags],
+        env=env, capture_output=True, text=True, timeout=30,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
 
 
 @pytest.fixture(autouse=True)

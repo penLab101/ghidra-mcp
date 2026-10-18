@@ -4,9 +4,15 @@ from .config import STATIC_TOOL_NAMES, _ALL_STATIC_TOOL_NAMES
 from .validation import sanitize_tool_name, _allocate_tool_name
 
 # Temporarily hide upstream tools by their exact MCP-visible name. Add/remove
-# names here, then restart the bridge. Static bridge tools are unaffected.
+# names here, then restart the bridge. Also applies to static bridge tools.
 DISABLED_TOOL_NAMES = {
     "ghidra_clear_flow_and_repair", # schema bloated + not frequently used
+    # All tools are loaded up front; lazy-load management is unnecessary.
+    "list_tool_groups",
+    "load_tool_group",
+    "unload_tool_group",
+    "check_tools",
+    "search_tools",
 }
 
 # Only replace known boilerplate. Tool-specific qualifications must survive;

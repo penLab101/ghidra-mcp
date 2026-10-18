@@ -1791,15 +1791,15 @@ class TestToolNameSanitization(unittest.TestCase):
             {
                 "tools": [
                     {
-                        "path": "/check/tools",
+                        "path": "/list/instances",
                         "method": "GET",
                         "params": [],
                     }
                 ]
             }
         )
-        self.assertEqual(schema[0]["name"], "check_tools_2")
-        self.assertEqual(schema[0]["sanitized_name"], "check_tools")
+        self.assertEqual(schema[0]["name"], "list_instances_2")
+        self.assertEqual(schema[0]["sanitized_name"], "list_instances")
         self.assertTrue(schema[0]["name_collided"])
 
     def test_parse_schema_suffixes_dynamic_name_collisions(self):
@@ -1848,7 +1848,7 @@ class TestToolNameSanitization(unittest.TestCase):
             {
                 "tools": [
                     {"path": "/server/status", "method": "GET", "params": []},
-                    {"path": "/check/tools", "method": "GET", "params": []},
+                    {"path": "/list/instances", "method": "GET", "params": []},
                     {"path": "/foo.bar", "method": "GET", "params": []},
                     {"path": "/foo/bar", "method": "GET", "params": []},
                 ]
@@ -1861,8 +1861,8 @@ class TestToolNameSanitization(unittest.TestCase):
             invalid = [name for name in bridge.mcp._tool_manager._tools if not pattern.fullmatch(name)]
             self.assertEqual(invalid, [])
             self.assertIn("server_status", bridge.mcp._tool_manager._tools)
-            # /check/tools collides with the static management tool check_tools
-            self.assertIn("check_tools_2", bridge.mcp._tool_manager._tools)
+            # /list/instances collides with the static management tool list_instances
+            self.assertIn("list_instances_2", bridge.mcp._tool_manager._tools)
             self.assertIn("foo_bar", bridge.mcp._tool_manager._tools)
             self.assertIn("foo_bar_2", bridge.mcp._tool_manager._tools)
         finally:
