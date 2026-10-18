@@ -34,6 +34,10 @@ the 235-tool schema recording); the figures above are the current ones.
 
 ### Changed — Smaller MCP tool schemas
 
+- Clarified `run_ghidra_script` and `run_script_inline` descriptions: filename
+  lookup versus explicit paths, temporary inline sources, Java source forms,
+  `getScriptArgs()`, literal whitespace splitting, cooperative timeout and
+  output capture. Both tools document the existing rejection of `dry_run=true`.
 - Added a bridge-side `DISABLED_TOOL_NAMES` set in `schema.py` for temporarily
   excluding upstream tools from registration, discovery and lazy loading.
   `ghidra_clear_flow_and_repair` is disabled by default; remove its name and

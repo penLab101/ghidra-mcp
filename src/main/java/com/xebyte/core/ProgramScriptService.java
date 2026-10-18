@@ -2538,19 +2538,21 @@ public class ProgramScriptService {
         return sb.toString();
     }
 
-    @McpTool(path = "/run_script_inline", dryRun = false, method = "POST", description = "Execute inline Ghidra script code. Pass the full Java source as the 'code' body parameter. Gated by GHIDRA_MCP_ALLOW_SCRIPTS=1 (v5.4.1+).", category = "program", access = ToolAccess.WRITE)
+    @McpTool(path = "/run_script_inline", dryRun = false, method = "POST",
+            description = "Compile and run inline Java in Ghidra, capturing console output. "
+                        + "Source is temporary in ~/ghidra_scripts and deleted after success; "
+                        + "it is not saved for reuse by name. Requires GHIDRA_MCP_ALLOW_SCRIPTS=1. "
+                        + "dry_run=true is rejected without execution.",
+            category = "program", access = ToolAccess.WRITE)
     public Response runScriptInline(
             @Param(value = "code", source = ParamSource.BODY,
-                   description = "Complete Java source for a GhidraScript, as one string — not a bare "
-                               + "statement. If it declares `public class X` that name is used for the "
-                               + "file; otherwise a unique McpInline_<hex> class name is generated. The "
-                               + "source is written into ~/ghidra_scripts and compiled by Ghidra, so a "
-                               + "compile error surfaces as script output rather than as a request "
-                               + "error.") String code,
+                   description = "Java statements (auto-wrapped), or full source with "
+                               + "import ghidra.app.script.GhidraScript; and one public class "
+                               + "extending GhidraScript with public void run() throws Exception. "
+                               + "Use a unique class name; existing files are not overwritten.") String code,
             @Param(value = "args", source = ParamSource.BODY, defaultValue = "",
-                   description = "Arguments handed to the script, split on WHITESPACE into a String[]. "
-                               + "There is no quoting, so an argument containing a space arrives as two "
-                               + "arguments.") String args,
+                   description = "Whitespace-separated; not quote-aware: \"a b\" becomes two args "
+                               + "with literal quotes. Read with getScriptArgs(), not an args field.") String args,
             @Param(value = "program", description = "Target program name", defaultValue = "") String programName) {
         if (!SecurityConfig.getInstance().areScriptsAllowed()) {
             return Response.err("Script execution disabled. Set GHIDRA_MCP_ALLOW_SCRIPTS=1 "
@@ -3577,28 +3579,29 @@ public class ProgramScriptService {
         return runGhidraScriptWithCapture(scriptName, scriptArgs, timeoutSeconds, captureOutput, null);
     }
 
-    @McpTool(path = "/run_ghidra_script", dryRun = false, method = "POST", description = "Execute script with output capture and timeout. Gated by GHIDRA_MCP_ALLOW_SCRIPTS=1 (v5.4.1+).", category = "program", access = ToolAccess.WRITE)
+    @McpTool(path = "/run_ghidra_script", dryRun = false, method = "POST",
+            description = "Execute a saved Ghidra script by filename or path, capturing console output. "
+                        + "Requires GHIDRA_MCP_ALLOW_SCRIPTS=1. dry_run=true is rejected without execution.",
+            category = "program", access = ToolAccess.WRITE)
     public Response runGhidraScriptWithCapture(
 @Param(value = "script_name", source = ParamSource.BODY,
-                   description = "Script to run. Searched in ~/ghidra_scripts, <cwd>/ghidra_scripts and "
-                               + "./ghidra_scripts, then tried as an absolute path. A name with no dot in "
-                               + "it is tried with .java, then .py, then bare.") String scriptName,
+                   description = "Filename searched non-recursively in ~/ghidra_scripts and "
+                               + "<cwd>/ghidra_scripts (./ghidra_scripts), then tried as a path as-is. "
+                               + "Ghidra/Features/*/ghidra_scripts is not searched; supply a path for built-ins. "
+                               + "Names without a dot try .java, .py, then bare; otherwise the extension must match.") String scriptName,
             
 @Param(value = "args", source = ParamSource.BODY, defaultValue = "",
-                   description = "Arguments handed to the script, split on WHITESPACE into a String[]. "
-                               + "There is no quoting, so an argument containing a space arrives as two "
-                               + "arguments.") String scriptArgs,
+                   description = "Whitespace-separated; not quote-aware: \"a b\" becomes two args "
+                               + "with literal quotes. Read with getScriptArgs(), not an args field.") String scriptArgs,
             
 @Param(value = "timeout_seconds", source = ParamSource.BODY, defaultValue = "300",
-                   description = "Wall-clock limit for the run in SECONDS: 1 to 1800, default 300. A value "
-                               + "outside that range is REJECTED, not clamped.") int timeoutSeconds,
+                   description = "1–1800 seconds (default 300); out-of-range values are rejected. "
+                               + "Cancels the script monitor; scripts must check cancellation to stop. "
+                               + "Does not forcibly interrupt execution.") int timeoutSeconds,
             
 @Param(value = "capture_output", source = ParamSource.BODY, defaultValue = "true",
-                   description = "Return the script's console output in the response. Set false for scripts that "
-                               + "emit large volumes of console text you do not need -- the script still runs and "
-                               + "'success' is still reported, but 'console_output' is omitted and 'output_captured' "
-                               + "is false. Output of a FAILED script is always returned regardless, so a failure is "
-                               + "never silent.") boolean captureOutput,
+                   description = "False omits console_output on success (output_captured=false). "
+                               + "Failures always include output.") boolean captureOutput,
             @Param(value = "program", description = "Target program name", defaultValue = "") String programName) {
         if (!SecurityConfig.getInstance().areScriptsAllowed()) {
             return Response.err("Script execution disabled. Set GHIDRA_MCP_ALLOW_SCRIPTS=1 "

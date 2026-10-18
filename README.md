@@ -949,8 +949,8 @@ write the path with forward slashes.
 - `reanalyze` - Trigger full auto-analysis on a program
 - `remove_program_option` - Remove an option from a program option group
 - `remove_property` - Remove the value stored at a single address in a property map
-- `run_ghidra_script` - Run script with output capture
-- `run_script_inline` - Run inline script code
+- `run_ghidra_script` - Execute a saved Ghidra script by filename or path, capturing console output
+- `run_script_inline` - Compile and run inline Java in Ghidra, capturing console output
 - `save_all_programs` - Save all open programs
 - `save_program` - Save current program
 - `set_bookmark` - Set bookmark

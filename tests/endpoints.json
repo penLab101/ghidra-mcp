@@ -2594,7 +2594,7 @@
         "gui",
         "headless"
       ],
-      "description": "Run script with output capture"
+      "description": "Execute a saved Ghidra script by filename or path, capturing console output. Requires GHIDRA_MCP_ALLOW_SCRIPTS=1. dry_run=true is rejected without execution."
     },
     {
       "path": "/run_script_inline",
@@ -2609,7 +2609,7 @@
         "gui",
         "headless"
       ],
-      "description": "Run inline script code"
+      "description": "Compile and run inline Java in Ghidra, capturing console output. Source is temporary in ~/ghidra_scripts and deleted after success; it is not saved for reuse by name. Requires GHIDRA_MCP_ALLOW_SCRIPTS=1. dry_run=true is rejected without execution."
     },
     {
       "path": "/save_all_programs",
