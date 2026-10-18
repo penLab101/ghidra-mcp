@@ -34,6 +34,10 @@ the 235-tool schema recording); the figures above are the current ones.
 
 ### Changed — Smaller MCP tool schemas
 
+- Added a separate `HIDE_OPTIONAL_TOOL_NAMES` set in `schema.py`, combined with
+  `DISABLED_TOOL_NAMES`, to hide 39 optional analysis, server-administration,
+  project-housekeeping and property-map tools from the MCP surface. Remove a
+  name and restart the bridge to restore it; HTTP endpoints remain available.
 - Publish only canonical arguments for schema-driven tools, restoring canonical
   required fields while retaining legacy alias acceptance internally. All enabled
   tools, nullable unions and defaults remain available. On the latest 206-tool

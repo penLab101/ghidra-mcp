@@ -4,9 +4,59 @@ from .config import STATIC_TOOL_NAMES, _ALL_STATIC_TOOL_NAMES
 from .schema_descriptions import DESCRIPTION_REPLACEMENTS
 from .validation import sanitize_tool_name, _allocate_tool_name
 
-# Temporarily hide tools by their exact bridge name, before any client-added
-# prefix (e.g. ghidra_). Add/remove names here, then restart the bridge.
-# Also applies to static bridge tools.
+# Optional tools hidden from the everyday reverse-engineering tool surface.
+# Use exact bridge names, before client-added prefixes (e.g. ghidra_).
+# Remove a name and restart the bridge to restore it; HTTP endpoints stay intact.
+HIDE_OPTIONAL_TOOL_NAMES = {
+    # Local computation and basic naming heuristics.
+    "convert_number",
+    "suggest_field_names",
+    # Overlapping function bundles and documentation-specific scoring.
+    "analyze_function_complete",
+    "analyze_for_documentation",
+    "analyze_function_completeness",
+    "analyze_global_completeness",
+    # API-name-based malware triage.
+    "analyze_api_call_chains",
+    "detect_malware_behaviors",
+    # Ghidra Server administration and version control.
+    "checkin_program",
+    "server_admin_set_permissions",
+    "server_admin_terminate_all_checkouts",
+    "server_admin_terminate_checkout",
+    "server_admin_users",
+    "server_authenticate",
+    "server_checkouts",
+    "server_connect",
+    "server_disconnect",
+    "server_repositories",
+    "server_repository_create",
+    "server_repository_file",
+    "server_repository_files",
+    "server_status",
+    "server_version_control_add",
+    "server_version_control_checkout",
+    "server_version_control_undo_checkout",
+    "server_version_history",
+    # Project housekeeping; retain project/program discovery, import and export.
+    "archive_project",
+    "create_folder",
+    "delete_file",
+    "delete_project",
+    "move_file",
+    "move_folder",
+    "restore_project",
+    # Custom program property-map storage.
+    "create_property_map",
+    "delete_property_map",
+    "get_property",
+    "list_properties",
+    "remove_property",
+    "set_property",
+}
+
+# Additional exclusions, combined with the optional-tool list above.
+# Also applies to static bridge tools. Edit either set, then restart the bridge.
 DISABLED_TOOL_NAMES = {
     "clear_flow_and_repair",  # schema bloated + not frequently used
     # All tools are loaded up front; lazy-load management is unnecessary.
@@ -15,7 +65,7 @@ DISABLED_TOOL_NAMES = {
     "unload_tool_group",
     "check_tools",
     "search_tools",
-}
+} | HIDE_OPTIONAL_TOOL_NAMES
 
 # Only replace known boilerplate. Tool-specific qualifications must survive;
 # truncating descriptions or rewriting by parameter name can hide real rules.

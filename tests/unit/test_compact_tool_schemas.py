@@ -350,7 +350,9 @@ def test_recorded_catalog_payload_shrinks_without_losing_contract(isolated_tools
         return len(json.dumps([t.model_dump(mode="json", exclude_none=True) for t in tools]).encode())
 
     assert len(raw) == len(compact)
-    assert len(compact) > 190
+    assert {tool.name for tool in compact} == (
+        metadata.keys() - schema.DISABLED_TOOL_NAMES - schema.STATIC_TOOL_NAMES
+    )
     assert size(compact) < size(raw) * 0.82
     for before, after in zip(raw, compact):
         assert after.model_dump(exclude={"inputSchema", "description"}) == before.model_dump(

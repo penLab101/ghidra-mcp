@@ -1847,7 +1847,7 @@ class TestToolNameSanitization(unittest.TestCase):
         schema = bridge._parse_schema(
             {
                 "tools": [
-                    {"path": "/server/status", "method": "GET", "params": []},
+                    {"path": "/mcp/health", "method": "GET", "params": []},
                     {"path": "/list/instances", "method": "GET", "params": []},
                     {"path": "/foo.bar", "method": "GET", "params": []},
                     {"path": "/foo/bar", "method": "GET", "params": []},
@@ -1860,7 +1860,7 @@ class TestToolNameSanitization(unittest.TestCase):
         try:
             invalid = [name for name in bridge.mcp._tool_manager._tools if not pattern.fullmatch(name)]
             self.assertEqual(invalid, [])
-            self.assertIn("server_status", bridge.mcp._tool_manager._tools)
+            self.assertIn("mcp_health", bridge.mcp._tool_manager._tools)
             # /list/instances collides with the static management tool list_instances
             self.assertIn("list_instances_2", bridge.mcp._tool_manager._tools)
             self.assertIn("foo_bar", bridge.mcp._tool_manager._tools)
