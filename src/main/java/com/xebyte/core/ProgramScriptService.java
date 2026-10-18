@@ -2752,7 +2752,7 @@ public class ProgramScriptService {
         seenDirs.add(new File(System.getProperty("user.home"), "ghidra_scripts").getAbsolutePath());
         // seenDirs.add(new File("./ghidra_scripts").getAbsolutePath());
         // String ghidraInstall = System.getProperty("ghidra.install.dir", System.getenv("GHIDRA_INSTALL_DIR"));
-        String ghidraInstall = null
+        String ghidraInstall = null;
         if (ghidraInstall != null && !ghidraInstall.isEmpty()) {
             File feat = new File(ghidraInstall, "Ghidra/Features");
             File[] bundles = feat.isDirectory() ? feat.listFiles() : null;
