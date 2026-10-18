@@ -34,19 +34,18 @@ _DESCRIPTION_REPLACEMENTS = (
     (
         "Preview the change without applying it. When true the server validates the request "
         "and reports what would happen, leaving the program unmodified. Defaults to false.",
-        "Validate and preview without modifying the program.",
+        "dryrun",
     ),
     (
         "Optional per-call override for naming enforcement: 'enforce' (reject low-quality names), "
         "'warn' (write goes through with warnings), or 'off' (skip validation entirely). "
         "Omit to use the project/global setting.",
-        "Naming: enforce=reject low-quality names, warn=write with warnings, off=skip validation. "
-        "Omit for project/global setting.",
+        "Opional; Naming enforcement: 'enforce' / 'warn' / 'off'"
     ),
     (
         "Optional per-call override for naming enforcement: 'enforce' / 'warn' / 'off'. "
         "Omit to use the project/global setting.",
-        "Naming: enforce/warn/off; omit for project/global setting.",
+        "Opitonal; Naming enforcement: enforce/warn/off",
     ),
     (
         "Validate and preview without modifying the program.",
