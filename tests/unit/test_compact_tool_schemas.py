@@ -205,7 +205,7 @@ def test_wire_schema_is_compact_for_static_and_late_dynamic_tools(
                 "type": "object",
                 "required": ["address"],
                 "properties": {
-                    "address": {"type": "string", "description": verbose},
+                    "address": {"type": "string", "description": verbose, "aliases": ["old_address"]},
                     "program": {
                         "type": "string",
                         "description": "Target program name (omit to use the active program)",
@@ -221,6 +221,7 @@ def test_wire_schema_is_compact_for_static_and_late_dynamic_tools(
     assert dynamic.inputSchema["properties"]["address"]["description"] == concise
     assert "description" not in dynamic.inputSchema["properties"]["program"]
     assert dynamic.inputSchema["required"] == ["address"]
+    assert "old_address" not in dynamic.inputSchema["properties"]
     if synthetic_dry_run == "1":
         assert dynamic.inputSchema["properties"]["dry_run"]["default"] is False
     else:
@@ -236,6 +237,8 @@ def test_wire_schema_is_compact_for_static_and_late_dynamic_tools(
         "Target program name (omit to use the active program)"
     )
     assert "title" in stored.parameters["properties"]["address"]
+    assert "old_address" in stored.parameters["properties"]
+    assert "address" not in stored.parameters.get("required", [])
 
 
 def test_compact_tool_still_validates_and_dispatches_defaults_and_aliases(isolated_tools, monkeypatch):
@@ -262,8 +265,18 @@ def test_compact_tool_still_validates_and_dispatches_defaults_and_aliases(isolat
             },
         }
     )
-    _list_from_protocol()  # The SDK also caches advertised tools on this path.
-    asyncio.run(server.mcp.call_tool("write_probe", {"old_name": "Example", "count": 2, "dry_run": True}))
+    advertised = _list_from_protocol().tools[0]
+    assert advertised.inputSchema["required"] == ["count", "name"]
+    assert "old_name" not in advertised.inputSchema["properties"]
+    # Exercise the wire handler after tools/list populated the SDK's cache.
+    handler = server.mcp._mcp_server.request_handlers[types.CallToolRequest]
+
+    def call(arguments):
+        return asyncio.run(handler(types.CallToolRequest(
+            method="tools/call", params=types.CallToolRequestParams(name="write_probe", arguments=arguments),
+        ))).root
+
+    assert not call({"old_name": "Example", "count": 2, "dry_run": True}).isError
     assert calls == [
         (
             "/write_probe",
@@ -275,12 +288,60 @@ def test_compact_tool_still_validates_and_dispatches_defaults_and_aliases(isolat
     ]
     with pytest.raises(ToolError, match="count"):
         asyncio.run(server.mcp.call_tool("write_probe", {"old_name": "Example"}))
+    assert call({"count": 2}).isError
     assert len(calls) == 1
+    assert not call({"name": "Canonical", "old_name": "Ignored", "count": 3}).isError
+    assert calls[-1][1]["data"]["name"] == "Canonical"
+
+
+def test_canonical_publication_respects_collisions_and_tool_lifecycle(isolated_tools):
+    definition = {
+        "name": "collision_probe", "endpoint": "/probe",
+        "input_schema": {
+            "required": ["first", "second", "real"],
+            "properties": {
+                "first": {"type": "string", "aliases": ["shared", "real"]},
+                "second": {"type": "string", "aliases": ["shared"]},
+                "real": {"type": "string"},
+                "optional": {"type": "integer", "aliases": ["old_optional"]},
+            },
+        },
+    }
+    before = deepcopy(definition)
+    registry._register_tool_def(definition)
+    published = _list_from_protocol().tools[0].inputSchema
+    assert set(published["properties"]) == {"first", "second", "real", "optional"}
+    assert set(published["required"]) == {"first", "second", "real"}
+    assert published["properties"]["optional"] == {
+        "anyOf": [{"type": "integer"}, {"type": "null"}], "default": None,
+    }
+    assert _list_from_protocol().tools[0].inputSchema == published
+    assert definition == before
+    # A replacement must use its own metadata, even when an old alias is now a
+    # real argument. A subsequent static replacement has no dynamic metadata.
+    server.mcp.remove_tool("collision_probe")
+    replacement = deepcopy(definition)
+    replacement["input_schema"] = {
+        "required": ["shared"], "properties": {"shared": {"type": "string"}},
+    }
+    registry._register_tool_def(replacement)
+    assert _list_from_protocol().tools[0].inputSchema == {
+        "type": "object", "required": ["shared"], "properties": {"shared": {"type": "string"}},
+    }
+    server.mcp.remove_tool("collision_probe")
+
+    def static_probe(old_optional: str):
+        return old_optional
+
+    server.mcp.add_tool(static_probe, name="collision_probe", structured_output=False)
+    assert _list_from_protocol().tools[0].inputSchema["required"] == ["old_optional"]
 
 
 def test_recorded_catalog_payload_shrinks_without_losing_contract(isolated_tools):
     recording = Path(__file__).resolve().parents[1] / "conformance/snapshots/mcp_schema.snap"
-    for tool in schema._parse_schema(json.loads(recording.read_text(encoding="utf-8"))):
+    definitions = schema._parse_schema(json.loads(recording.read_text(encoding="utf-8")))
+    metadata = {tool["name"]: tool["input_schema"] for tool in definitions}
+    for tool in definitions:
         registry._register_tool_def(tool)  # import_file is owned by the static bridge tool.
     raw = asyncio.run(server._orig_list_tools())
     compact = asyncio.run(server.mcp.list_tools())
@@ -298,9 +359,18 @@ def test_recorded_catalog_payload_shrinks_without_losing_contract(isolated_tools
         assert after.description == (
             schema._compact_description(before.description) if before.description is not None else None
         )
-        assert after.inputSchema.get("required") == before.inputSchema.get("required")
-        assert after.inputSchema["properties"].keys() == before.inputSchema["properties"].keys()
+        definition = metadata[before.name]
+        assert after.inputSchema["properties"].keys() == definition["properties"].keys() | (
+            {"dry_run"} if "dry_run" in before.inputSchema["properties"] else set()
+        )
+        assert set(after.inputSchema.get("required", [])) == set(before.inputSchema.get("required", [])) | {
+            name for name in definition.get("required", [])
+            if definition["properties"][name].get("aliases")
+        }
         for name, original_param in before.inputSchema["properties"].items():
+            if name not in after.inputSchema["properties"]:
+                assert any(name in param.get("aliases", []) for param in definition["properties"].values())
+                continue
             # All validation keywords, defaults and nullable unions must match.
             published_param = after.inputSchema["properties"][name]
             assert {k: v for k, v in original_param.items() if k not in {"title", "description"}} == {

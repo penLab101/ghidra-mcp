@@ -6,7 +6,7 @@ from mcp.server.lowlevel.server import NotificationOptions
 
 # `state` imports only from `config`, so this cannot cycle back through here.
 from . import state as _state
-from .schema import _compact_description, _compact_input_schema
+from .schema import _canonical_input_schema, _compact_description, _compact_input_schema
 
 # The MCP server singleton. All static and dynamically registered tools attach
 # to this object.
@@ -107,16 +107,21 @@ async def _list_tools_capturing_session():
     # Compact only the advertised copy. FastMCP's argument models and the full
     # upstream docs remain intact for validation, dispatch and discovery.
     tools = await _orig_list_tools()
-    return [
-        tool.model_copy(update={
-            "inputSchema": _compact_input_schema(tool.inputSchema),
+    published = []
+    for tool in tools:
+        input_schema = _compact_input_schema(tool.inputSchema)
+        registered = mcp._tool_manager.get_tool(tool.name)
+        definition = getattr(registered.fn, "_ghidra_input_schema", None) if registered else None
+        if definition is not None:
+            input_schema = _canonical_input_schema(input_schema, definition)
+        published.append(tool.model_copy(update={
+            "inputSchema": input_schema,
             "description": (
                 _compact_description(tool.description)
                 if tool.description is not None else None
             ),
-        })
-        for tool in tools
-    ]
+        }))
+    return published
 
 
 mcp.list_tools = _list_tools_capturing_session

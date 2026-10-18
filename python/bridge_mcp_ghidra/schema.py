@@ -118,6 +118,37 @@ def _compact_description(description: str) -> str:
     return description
 
 
+def _parameter_aliases(properties: dict) -> dict[str, str]:
+    """Resolve declared aliases without shadowing canonical or earlier names."""
+    aliases = {}
+    for canonical, param in properties.items():
+        for alias in param.get("aliases") or ():
+            if alias not in properties and alias not in aliases:
+                aliases[alias] = canonical
+    return aliases
+
+
+def _canonical_input_schema(schema: dict, definition: dict) -> dict:
+    """Hide confirmed aliases in an advertised copy, restoring required names.
+
+    Keep canonical parameter schemas intact, including their nullable unions
+    and defaults. Internal FastMCP models still accept the legacy spellings.
+    """
+    aliases = _parameter_aliases(definition.get("properties", {}))
+    properties = schema.get("properties", {})
+    if not aliases:
+        return schema
+    published = dict(schema)
+    published["properties"] = {name: value for name, value in properties.items() if name not in aliases}
+    required = list(schema.get("required", []))
+    for name in definition.get("required", []):
+        if name in aliases.values() and name in properties and name not in required:
+            required.append(name)
+    if required:
+        published["required"] = required
+    return published
+
+
 def _compact_input_schema(schema: dict) -> dict:
     """Copy a JSON Schema, dropping titles, empty descriptions and repeated prose.
 

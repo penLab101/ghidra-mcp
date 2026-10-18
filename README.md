@@ -482,6 +482,11 @@ export GHIDRA_MCP_LAZY=0                    # when you don't (Docker, uvx, some 
 `--lazy`/`--no-lazy` on the command line wins over it. Startup logs which mode
 is in effect.
 
+The bridge publishes canonical argument names for schema-driven tools and
+continues accepting legacy aliases internally. Required inputs are advertised
+under their canonical names. Restart the Python bridge and refresh the client's
+tool list to pick up schema publication changes; no extension rebuild is needed.
+
 To reduce repeated tool inputs, set `GHIDRA_MCP_SYNTHETIC_DRY_RUN=0` in the
 Python bridge process environment (for example, the MCP client's `env` block).
 This disables automatically appended `dry_run` inputs on POST tools. Explicitly

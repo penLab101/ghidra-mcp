@@ -34,6 +34,10 @@ the 235-tool schema recording); the figures above are the current ones.
 
 ### Changed — Smaller MCP tool schemas
 
+- Publish only canonical arguments for schema-driven tools, restoring canonical
+  required fields while retaining legacy alias acceptance internally. All enabled
+  tools, nullable unions and defaults remain available. On the latest 206-tool
+  capture this saves 7,922 normalized JSON characters; this is not a token count.
 - Further shortened 22 tool descriptions, 49 parameter descriptions and shared
   address-space guidance at publication. Against the same captured request,
   enabled schemas now measure 143,941 normalized JSON characters (another

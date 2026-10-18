@@ -1,6 +1,7 @@
 """Dynamic tool registration from /mcp/schema, plus tool-group management."""
 
 import asyncio
+from copy import deepcopy
 import inspect
 import json
 import os
@@ -22,7 +23,7 @@ from .config import (
     _ALL_STATIC_TOOL_NAMES,
     logger,
 )
-from .schema import DISABLED_TOOL_NAMES, _TYPE_MAP, _normalize_tool_def_names, _parse_schema
+from .schema import DISABLED_TOOL_NAMES, _TYPE_MAP, _normalize_tool_def_names, _parameter_aliases, _parse_schema
 from .server import Context, mcp
 from .validation import sanitize_address, validate_tool_name
 
@@ -51,16 +52,9 @@ def _build_tool_function(endpoint: str, http_method: str, params_schema: dict):
     # request went out without the value; and when the canonical name was
     # required, the call was rejected client-side for a spelling the server
     # accepts. Declaring each alias as an optional parameter and folding it onto
-    # the canonical name is what makes the published contract reachable.
-    alias_to_canonical: dict[str, str] = {}
-    for _canonical, _pdef in properties.items():
-        for _alias in _pdef.get("aliases") or ():
-            # Never shadow a real parameter, and never let a second declaration
-            # steal an alias already claimed: first declaration wins, which is
-            # the order the Java resolver walks.
-            if _alias in properties or _alias in alias_to_canonical:
-                continue
-            alias_to_canonical[_alias] = _canonical
+    # the canonical name keeps older callers working. Only canonical arguments
+    # are advertised in tools/list.
+    alias_to_canonical = _parameter_aliases(properties)
     # A required parameter that has aliases cannot stay required in the
     # signature -- the alias IS the value. The check moves into the handler,
     # after folding, so it still fails loudly but on the real condition.
@@ -356,6 +350,9 @@ def _register_tool_def(tool_def: dict) -> bool:
     handler.__annotations__ = dict(sync_handler.__annotations__, ctx=Context | None)
     handler.__name__ = name
     handler.__doc__ = description
+    # Bind publication metadata to this callable so replacement/unload cannot
+    # leave a stale name-indexed schema behind. Never mutate the upstream data.
+    handler._ghidra_input_schema = deepcopy(input_schema)
 
     mcp.tool(
         name=name,
