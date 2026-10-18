@@ -89,8 +89,12 @@ def _list_from_protocol(cursor=None):
     return asyncio.run(handler(types.ListToolsRequest(method="tools/list", params=params))).root
 
 
+@pytest.mark.parametrize("synthetic_dry_run", ["0", "1"])
 @pytest.mark.parametrize("paginated", [False, True])
-def test_wire_schema_is_compact_for_static_and_late_dynamic_tools(isolated_tools, paginated):
+def test_wire_schema_is_compact_for_static_and_late_dynamic_tools(
+    isolated_tools, monkeypatch, paginated, synthetic_dry_run,
+):
+    monkeypatch.setenv("GHIDRA_MCP_SYNTHETIC_DRY_RUN", synthetic_dry_run)
     description, compact_description = schema._DESCRIPTION_REPLACEMENTS[-1]
 
     def static_probe(title: str, limit: int = 10) -> str:
@@ -131,7 +135,10 @@ def test_wire_schema_is_compact_for_static_and_late_dynamic_tools(isolated_tools
     dynamic = tools[-1]
     assert dynamic.inputSchema["properties"]["address"]["description"] == concise
     assert dynamic.inputSchema["required"] == ["address"]
-    assert dynamic.inputSchema["properties"]["dry_run"]["default"] is False
+    if synthetic_dry_run == "1":
+        assert dynamic.inputSchema["properties"]["dry_run"]["default"] is False
+    else:
+        assert "dry_run" not in dynamic.inputSchema["properties"]
     assert dynamic.description == compact_description + suffix
     assert dynamic.annotations.readOnlyHint is False
     assert dynamic.outputSchema is None

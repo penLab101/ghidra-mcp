@@ -482,6 +482,12 @@ export GHIDRA_MCP_LAZY=0                    # when you don't (Docker, uvx, some 
 `--lazy`/`--no-lazy` on the command line wins over it. Startup logs which mode
 is in effect.
 
+To reduce repeated tool inputs, set `GHIDRA_MCP_SYNTHETIC_DRY_RUN=0` in the
+Python bridge process environment (for example, the MCP client's `env` block).
+This disables automatically appended `dry_run` inputs on POST tools. Explicitly
+declared `dry_run` parameters remain available. The default is enabled;
+`0/false/no/off` disable appending. Restart the bridge after changing the flag.
+
 #### Strict program routing (multi-program safety)
 
 Set `GHIDRA_MCP_REQUIRE_PROGRAM_SELECTORS=1` to make the bridge refuse any program-scoped

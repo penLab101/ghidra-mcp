@@ -3,6 +3,7 @@
 import asyncio
 import inspect
 import json
+import os
 import sys
 from typing import Annotated
 
@@ -224,8 +225,12 @@ def _build_tool_function(endpoint: str, http_method: str, params_schema: dict):
         )
 
     sig_params = required_params + optional_params
+    # Keep upstream behavior by default; allow smaller MCP schemas on opt-out.
+    advertise_synthetic_dry_run = os.getenv("GHIDRA_MCP_SYNTHETIC_DRY_RUN", "1").strip().lower() not in {
+        "0", "false", "no", "off",
+    }
     # Add dry_run parameter for POST (write) endpoints
-    if use_synthetic_dry_run:
+    if use_synthetic_dry_run and advertise_synthetic_dry_run:
         sig_params.append(
             inspect.Parameter(
                 "dry_run",

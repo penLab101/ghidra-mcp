@@ -178,6 +178,7 @@ class TestPostToolDispatch(unittest.TestCase):
         )
 
     @patch("bridge_mcp_ghidra.dispatch.dispatch_post")
+    @patch.dict("os.environ", {"GHIDRA_MCP_SYNTHETIC_DRY_RUN": "0"})
     def test_schema_declared_query_dry_run_does_not_duplicate_signature(self, mock_post):
         from bridge_mcp_ghidra import _build_tool_function
 
@@ -207,6 +208,7 @@ class TestPostToolDispatch(unittest.TestCase):
         )
 
     @patch("bridge_mcp_ghidra.dispatch.dispatch_post")
+    @patch.dict("os.environ", {"GHIDRA_MCP_SYNTHETIC_DRY_RUN": "0"})
     def test_schema_declared_body_dry_run_uses_body_source(self, mock_post):
         from bridge_mcp_ghidra import _build_tool_function
 

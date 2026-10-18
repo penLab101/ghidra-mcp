@@ -34,6 +34,9 @@ the 235-tool schema recording); the figures above are the current ones.
 
 ### Changed — Smaller MCP tool schemas
 
+- Set `GHIDRA_MCP_SYNTHETIC_DRY_RUN=0` in the bridge's environment to stop
+  appending a synthetic `dry_run` input to POST tools. The default behavior and
+  tools that explicitly declare `dry_run` are preserved.
 - Clarified `run_ghidra_script` and `run_script_inline` descriptions: filename
   lookup versus explicit paths, temporary inline sources, Java source forms,
   `getScriptArgs()`, literal whitespace splitting, cooperative timeout and
