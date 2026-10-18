@@ -518,17 +518,19 @@ Off by default: with the variable unset the bridge sends calls unchanged.
 #### Reducing tool-context overhead
 
 The bridge compacts `tools/list` automatically: it removes generated schema
-titles and applies explicit text replacements to parameter and tool descriptions.
+titles and empty descriptions, and shortens known repeated parameter and tool
+descriptions.
 Argument names, types, defaults, validation rules and tool safety annotations are
 preserved. Stored descriptions retain their full text, and `/mcp/schema` still
 returns the original server documentation.
 
 To temporarily disable individual upstream tools, edit `DISABLED_TOOL_NAMES` in
-`python/bridge_mcp_ghidra/schema.py` and restart the bridge. Use exact MCP-visible
-names. `ghidra_clear_flow_and_repair` is disabled by default; remove its entry to
-restore it. Disabled tools are excluded from registration, search and group
-loading, including when all tools are loaded with `--no-lazy`. This gate does
-not enable lazy loading. Static bridge tools are unaffected.
+`python/bridge_mcp_ghidra/schema.py` and restart the bridge. Use exact bridge names
+before client-added prefixes such as `ghidra_`. `clear_flow_and_repair` is disabled
+by default; remove its entry to restore it. Disabled tools are excluded from
+registration, search and group loading, including when all tools are loaded with
+`--no-lazy`. This gate does not enable lazy loading. The same set also controls
+static bridge tools.
 
 The bridge exposes a large catalog, so it loads only `listing,function,program`
 on connect (see above) and lets the model **discover** the rest on demand

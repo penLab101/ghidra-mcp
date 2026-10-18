@@ -540,3 +540,4 @@ ghidra_scripts/db.env
 
 # Repository-local Gradle user cache for restricted build sessions.
 /.gradle-user-home/
+*analysis.jsonl

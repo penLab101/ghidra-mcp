@@ -70,6 +70,85 @@ def test_only_known_boilerplate_is_shortened():
     assert schema._compact_input_schema(compact) == compact
 
 
+def test_empty_descriptions_removed_only_from_schema_nodes():
+    literal = {"description": "", "title": "literal"}
+    original = {
+        "description": "",
+        "properties": {
+            "description": {"type": "string", "description": " \n\t"},
+            "program": {
+                "type": "string",
+                "description": "Target program name (omit to use the active program)",
+                "default": "",
+            },
+            "entries": {
+                "anyOf": [
+                    {"type": "array", "items": {"type": "object", "description": ""}},
+                    {"type": "null", "description": ""},
+                ],
+                "default": None,
+            },
+        },
+        "$defs": {"Entry": {"type": "string", "description": ""}},
+        "additionalProperties": {"type": "string", "description": ""},
+        "default": literal,
+        "enum": [literal],
+        "examples": [literal],
+    }
+    before = deepcopy(original)
+    compact = schema._compact_input_schema(original)
+    assert "description" not in compact
+    assert compact["properties"]["description"] == {"type": "string"}
+    assert compact["properties"]["program"] == {"type": "string", "default": ""}
+    assert compact["properties"]["entries"] == {
+        "anyOf": [{"type": "array", "items": {"type": "object"}}, {"type": "null"}],
+        "default": None,
+    }
+    assert compact["$defs"]["Entry"] == {"type": "string"}
+    assert compact["additionalProperties"] == {"type": "string"}
+    for key in ("default", "enum", "examples"):
+        assert compact[key] == original[key]
+    assert schema._compact_input_schema(compact) == compact
+    assert original == before
+
+
+def test_pagination_compaction_preserves_tool_specific_zero_limit_rules():
+    recording = Path(__file__).resolve().parents[1] / "conformance/snapshots/mcp_schema.snap"
+    tools = schema._parse_schema(json.loads(recording.read_text(encoding="utf-8")))
+    compacted = 0
+    for tool in tools:
+        original = tool["input_schema"]
+        compact = schema._compact_input_schema(original)
+        for name in ("offset", "limit"):
+            param = original["properties"].get(name)
+            if not param or "description" not in param:
+                continue
+            description = param["description"]
+            published = compact["properties"][name]["description"]
+            if "EMPTY page" in description or "MINIMUM of 1" in description:
+                # Some endpoints interpret zero as empty or one, not unlimited.
+                assert published == description
+            # An offset can also be a struct byte offset or a filtered hash
+            # offset. This check concerns the shared pagination boilerplate.
+            if name == "offset" and "Page by adding `limit`" not in description:
+                continue
+            if name == "limit" and not (
+                "negative value for no limit" in description or "0 means no limit" in description
+            ):
+                continue
+            if published != description:
+                compacted += 1
+                assert len(published) < len(description)
+                if name == "offset":
+                    assert "`limit`" in published and "`total`" in published
+                elif "negative value for no limit" in description:
+                    assert "<=0 = unlimited" in published and "`total`" in published
+                else:
+                    assert "0 = unlimited" in published
+            assert compact["properties"][name].get("default") == param.get("default")
+    assert compacted >= 16
+
+
 @pytest.fixture
 def isolated_tools(monkeypatch):
     monkeypatch.setattr(server.mcp._tool_manager, "_tools", {})
@@ -125,7 +204,13 @@ def test_wire_schema_is_compact_for_static_and_late_dynamic_tools(
             "input_schema": {
                 "type": "object",
                 "required": ["address"],
-                "properties": {"address": {"type": "string", "description": verbose}},
+                "properties": {
+                    "address": {"type": "string", "description": verbose},
+                    "program": {
+                        "type": "string",
+                        "description": "Target program name (omit to use the active program)",
+                    },
+                },
             },
         }
     )
@@ -134,6 +219,7 @@ def test_wire_schema_is_compact_for_static_and_late_dynamic_tools(
     assert [tool.name for tool in tools] == ["aaa_static", "zzz_dynamic"]
     dynamic = tools[-1]
     assert dynamic.inputSchema["properties"]["address"]["description"] == concise
+    assert "description" not in dynamic.inputSchema["properties"]["program"]
     assert dynamic.inputSchema["required"] == ["address"]
     if synthetic_dry_run == "1":
         assert dynamic.inputSchema["properties"]["dry_run"]["default"] is False
@@ -146,6 +232,9 @@ def test_wire_schema_is_compact_for_static_and_late_dynamic_tools(
     stored = server.mcp._tool_manager._tools["zzz_dynamic"]
     assert stored.description == description
     assert stored.parameters["properties"]["address"]["description"] == verbose
+    assert stored.parameters["properties"]["program"]["description"] == (
+        "Target program name (omit to use the active program)"
+    )
     assert "title" in stored.parameters["properties"]["address"]
 
 

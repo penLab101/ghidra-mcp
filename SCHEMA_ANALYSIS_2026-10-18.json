@@ -1,0 +1,354 @@
+{
+  "rows": 170,
+  "measurement": "normalized JSON characters; usage.in is whole-request tokens",
+  "variants": [
+    {
+      "first_line": 1,
+      "first_timestamp_as_logged": "2026-10-18T07:19:04.518020",
+      "first_request_usage": {
+        "in": 35418,
+        "out": 100,
+        "cache_read": 35200,
+        "reasoning": 43
+      },
+      "tools": 221,
+      "ghidra_tools": 206,
+      "ghidra_characters": 123959,
+      "tool_description_characters": 31260,
+      "parameter_description_characters": 0,
+      "parameters": 762,
+      "parameter_keys": {
+        "title": 762,
+        "type": 762,
+        "default": 520,
+        "items": 6,
+        "additionalProperties": 3
+      },
+      "requests": 7,
+      "last_line": 7
+    },
+    {
+      "first_line": 8,
+      "first_timestamp_as_logged": "2026-10-18T07:28:27.001346",
+      "first_request_usage": {
+        "in": 49754,
+        "out": 98,
+        "cache_read": 768,
+        "reasoning": 40
+      },
+      "tools": 220,
+      "ghidra_tools": 205,
+      "ghidra_characters": 187955,
+      "tool_description_characters": 30955,
+      "parameter_description_characters": 55164,
+      "parameters": 761,
+      "parameter_keys": {
+        "description": 490,
+        "title": 761,
+        "type": 761,
+        "default": 520,
+        "items": 6,
+        "additionalProperties": 3
+      },
+      "requests": 25,
+      "last_line": 32
+    },
+    {
+      "first_line": 33,
+      "first_timestamp_as_logged": "2026-10-18T08:20:26.004342",
+      "first_request_usage": {
+        "in": 3743,
+        "out": 95,
+        "cache_read": 3456,
+        "reasoning": 0
+      },
+      "tools": 13,
+      "ghidra_tools": 0,
+      "ghidra_characters": 2,
+      "tool_description_characters": 0,
+      "parameter_description_characters": 0,
+      "parameters": 0,
+      "parameter_keys": {},
+      "requests": 49,
+      "last_line": 82
+    },
+    {
+      "first_line": 34,
+      "first_timestamp_as_logged": "2026-10-18T08:20:27.085017",
+      "first_request_usage": {
+        "in": 102,
+        "out": 16,
+        "cache_read": 0,
+        "reasoning": 16
+      },
+      "tools": 0,
+      "ghidra_tools": 0,
+      "ghidra_characters": 2,
+      "tool_description_characters": 0,
+      "parameter_description_characters": 0,
+      "parameters": 0,
+      "parameter_keys": {},
+      "requests": 1,
+      "last_line": 34
+    },
+    {
+      "first_line": 83,
+      "first_timestamp_as_logged": "2026-10-18T09:56:03.768991",
+      "first_request_usage": {
+        "in": 35531,
+        "out": 254,
+        "cache_read": 768,
+        "reasoning": 151
+      },
+      "tools": 218,
+      "ghidra_tools": 205,
+      "ghidra_characters": 128570,
+      "tool_description_characters": 29848,
+      "parameter_description_characters": 21336,
+      "parameters": 761,
+      "parameter_keys": {
+        "description": 490,
+        "type": 761,
+        "default": 520,
+        "items": 6,
+        "additionalProperties": 3
+      },
+      "requests": 16,
+      "last_line": 98
+    },
+    {
+      "first_line": 99,
+      "first_timestamp_as_logged": "2026-10-18T10:23:48.645724",
+      "first_request_usage": {
+        "in": 32676,
+        "out": 131,
+        "cache_read": 1024,
+        "reasoning": 49
+      },
+      "tools": 218,
+      "ghidra_tools": 205,
+      "ghidra_characters": 117972,
+      "tool_description_characters": 29848,
+      "parameter_description_characters": 17293,
+      "parameters": 666,
+      "parameter_keys": {
+        "description": 395,
+        "type": 666,
+        "default": 425,
+        "items": 6,
+        "additionalProperties": 3
+      },
+      "requests": 33,
+      "last_line": 131
+    },
+    {
+      "first_line": 132,
+      "first_timestamp_as_logged": "2026-10-18T11:13:17.823374",
+      "first_request_usage": {
+        "in": 3938,
+        "out": 202,
+        "cache_read": 896,
+        "reasoning": 116
+      },
+      "tools": 15,
+      "ghidra_tools": 2,
+      "ghidra_characters": 896,
+      "tool_description_characters": 468,
+      "parameter_description_characters": 52,
+      "parameters": 1,
+      "parameter_keys": {
+        "description": 1,
+        "type": 1
+      },
+      "requests": 9,
+      "last_line": 140
+    },
+    {
+      "first_line": 141,
+      "first_timestamp_as_logged": "2026-10-18T11:14:01.986209",
+      "first_request_usage": {
+        "in": 53477,
+        "out": 262,
+        "cache_read": 896,
+        "reasoning": 23
+      },
+      "tools": 204,
+      "ghidra_tools": 191,
+      "ghidra_characters": 172143,
+      "tool_description_characters": 39590,
+      "parameter_description_characters": 52969,
+      "parameters": 716,
+      "parameter_keys": {
+        "description": 615,
+        "type": 591,
+        "additionalProperties": 7,
+        "default": 538,
+        "items": 10,
+        "anyOf": 125
+      },
+      "requests": 8,
+      "last_line": 148
+    },
+    {
+      "first_line": 149,
+      "first_timestamp_as_logged": "2026-10-18T11:15:05.644959",
+      "first_request_usage": {
+        "in": 48184,
+        "out": 101,
+        "cache_read": 768,
+        "reasoning": 44
+      },
+      "tools": 224,
+      "ghidra_tools": 211,
+      "ghidra_characters": 182240,
+      "tool_description_characters": 43311,
+      "parameter_description_characters": 54409,
+      "parameters": 743,
+      "parameter_keys": {
+        "description": 642,
+        "type": 616,
+        "default": 554,
+        "anyOf": 127,
+        "additionalProperties": 7,
+        "items": 10
+      },
+      "requests": 12,
+      "last_line": 160
+    },
+    {
+      "first_line": 161,
+      "first_timestamp_as_logged": "2026-10-18T11:25:27.810186",
+      "first_request_usage": {
+        "in": 47543,
+        "out": 101,
+        "cache_read": 1024,
+        "reasoning": 37
+      },
+      "tools": 220,
+      "ghidra_tools": 207,
+      "ghidra_characters": 179696,
+      "tool_description_characters": 42015,
+      "parameter_description_characters": 54122,
+      "parameters": 738,
+      "parameter_keys": {
+        "description": 637,
+        "type": 611,
+        "default": 553,
+        "anyOf": 127,
+        "additionalProperties": 7,
+        "items": 10
+      },
+      "requests": 3,
+      "last_line": 163
+    },
+    {
+      "first_line": 164,
+      "first_timestamp_as_logged": "2026-10-18T11:27:14.571600",
+      "first_request_usage": {
+        "in": 46217,
+        "out": 95,
+        "cache_read": 14464,
+        "reasoning": 35
+      },
+      "tools": 204,
+      "ghidra_tools": 191,
+      "ghidra_characters": 174050,
+      "tool_description_characters": 40908,
+      "parameter_description_characters": 53157,
+      "parameters": 720,
+      "parameter_keys": {
+        "description": 619,
+        "type": 593,
+        "default": 541,
+        "anyOf": 127,
+        "additionalProperties": 7,
+        "items": 10
+      },
+      "requests": 7,
+      "last_line": 170
+    }
+  ],
+  "latest_schema_scenarios": {
+    "aliases_confirmed": 101,
+    "required_restored": 21,
+    "cumulative": [
+      {
+        "scenario": "recorded",
+        "characters": 174050,
+        "saved_characters": 0
+      },
+      {
+        "scenario": "remove_empty_descriptions",
+        "characters": 171447,
+        "saved_characters": 2603
+      },
+      {
+        "scenario": "also_compact_simple_unions",
+        "characters": 168801,
+        "saved_characters": 5249
+      },
+      {
+        "scenario": "also_advertise_canonical_arguments_only",
+        "characters": 162979,
+        "saved_characters": 11071
+      },
+      {
+        "scenario": "SIMULATION_ONLY_description_budgets_240_160",
+        "characters": 143451,
+        "saved_characters": 30599
+      },
+      {
+        "scenario": "SIMULATION_ONLY_description_budgets_200_120",
+        "characters": 135203,
+        "saved_characters": 38847
+      },
+      {
+        "scenario": "SIMULATION_ONLY_description_budgets_160_100",
+        "characters": 127617,
+        "saved_characters": 46433
+      }
+    ]
+  },
+  "longest_latest_ghidra_tools": [
+    {
+      "name": "ghidra_apply_documentation",
+      "characters": 4750
+    },
+    {
+      "name": "ghidra_get_functions",
+      "characters": 3532
+    },
+    {
+      "name": "ghidra_create_memory_block",
+      "characters": 3507
+    },
+    {
+      "name": "ghidra_find_functions",
+      "characters": 2796
+    },
+    {
+      "name": "ghidra_list_globals",
+      "characters": 2319
+    },
+    {
+      "name": "ghidra_clear_flow_and_repair",
+      "characters": 2240
+    },
+    {
+      "name": "ghidra_rename_symbol",
+      "characters": 2225
+    },
+    {
+      "name": "ghidra_analyze_function_complete",
+      "characters": 2111
+    },
+    {
+      "name": "ghidra_list_data_items_by_xrefs",
+      "characters": 2101
+    },
+    {
+      "name": "ghidra_set_global",
+      "characters": 2084
+    }
+  ]
+}

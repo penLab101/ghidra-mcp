@@ -11,7 +11,7 @@ import sys
 from mcp.server.fastmcp.exceptions import ToolError
 import pytest
 
-from bridge_mcp_ghidra import registry, server, state, static_tools
+from bridge_mcp_ghidra import registry, schema, server, state, static_tools
 
 
 @pytest.mark.parametrize("flags, expected_lazy", [([], True), (["--lazy"], True), (["--no-lazy"], False)])
@@ -62,8 +62,12 @@ def tool(name):
 
 @pytest.mark.parametrize("groups", [None, set()])
 def test_disabled_tool_cannot_be_discovered_loaded_or_called(groups):
-    disabled = "ghidra_clear_flow_and_repair"
-    tools = [tool(disabled), tool("get_functions")]
+    disabled = "clear_flow_and_repair"
+    # Exercise the server's unprefixed name, rather than a client-added prefix.
+    tools = schema._parse_schema({"tools": [
+        {"path": "/clear_flow_and_repair", "category": "function"},
+        {"path": "/get_functions", "category": "function"},
+    ]})
     original = deepcopy(tools)
 
     assert registry.register_tools_from_schema(tools, groups=groups) == (1 if groups is None else 0)

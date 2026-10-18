@@ -34,6 +34,26 @@ the 235-tool schema recording); the figures above are the current ones.
 
 ### Changed — Smaller MCP tool schemas
 
+- Further shortened 22 tool descriptions, 49 parameter descriptions and shared
+  address-space guidance at publication. Against the same captured request,
+  enabled schemas now measure 143,941 normalized JSON characters (another
+  9,765 saved; 17.30% below the original capture), retaining 190 enabled tools.
+  Call constraints, warnings, validation and dispatch are preserved.
+- Shortened 36 verbose tool descriptions and 23 parameter descriptions through
+  `schema.py`'s existing publication replacements. Curated wording lives in
+  `schema_descriptions.py`; call constraints, warnings and stored documentation
+  are preserved. On the final captured request, this saves another 14,077
+  normalized JSON characters beyond the previous compaction.
+- Added `tools/context_analysis/measure_schema_trim.py` to measure the current
+  production trimming rules against a captured request schema, separating
+  description/schema compaction from disabled-tool filtering in characters and
+  UTF-8 bytes.
+- Fixed the disabled-tool name for `clear_flow_and_repair` to match the bridge's
+  unprefixed registration name. It is now excluded as intended.
+- Omit empty schema descriptions, including those emptied by compaction, and
+  shorten known pagination prose while preserving defaults, unlimited-page
+  conventions and the meaning of response totals. Nullable unions and aliases
+  retain their existing schemas and validation behavior.
 - Disabled the static lazy-load helpers (`list_tool_groups`, `load_tool_group`,
   `unload_tool_group`, `check_tools`, `search_tools`) through `DISABLED_TOOL_NAMES`.
   Loading behavior is unchanged; use `--no-lazy` to load all enabled tools on connection.
@@ -60,7 +80,7 @@ the 235-tool schema recording); the figures above are the current ones.
   repository paths from the script location, and propagates the build exit code.
 - Added a bridge-side `DISABLED_TOOL_NAMES` set in `schema.py` for temporarily
   excluding upstream tools from registration, discovery and lazy loading.
-  `ghidra_clear_flow_and_repair` is disabled by default; remove its name and
+  `clear_flow_and_repair` is disabled by default; remove its name and
   restart the bridge to restore it.
 - The Python bridge removes generated JSON Schema titles and shortens repeated
   address, program, naming-mode and dry-run guidance in `tools/list`, including

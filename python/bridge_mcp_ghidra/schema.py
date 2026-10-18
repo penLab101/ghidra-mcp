@@ -1,12 +1,14 @@
 """Schema parsing — converts the upstream /mcp/schema to internal tool defs."""
 
 from .config import STATIC_TOOL_NAMES, _ALL_STATIC_TOOL_NAMES
+from .schema_descriptions import DESCRIPTION_REPLACEMENTS
 from .validation import sanitize_tool_name, _allocate_tool_name
 
-# Temporarily hide upstream tools by their exact MCP-visible name. Add/remove
-# names here, then restart the bridge. Also applies to static bridge tools.
+# Temporarily hide tools by their exact bridge name, before any client-added
+# prefix (e.g. ghidra_). Add/remove names here, then restart the bridge.
+# Also applies to static bridge tools.
 DISABLED_TOOL_NAMES = {
-    "ghidra_clear_flow_and_repair", # schema bloated + not frequently used
+    "clear_flow_and_repair",  # schema bloated + not frequently used
     # All tools are loaded up front; lazy-load management is unnecessary.
     "list_tool_groups",
     "load_tool_group",
@@ -46,12 +48,12 @@ _DESCRIPTION_REPLACEMENTS = (
         "Optional per-call override for naming enforcement: 'enforce' (reject low-quality names), "
         "'warn' (write goes through with warnings), or 'off' (skip validation entirely). "
         "Omit to use the project/global setting.",
-        "Opional; Naming enforcement: 'enforce' / 'warn' / 'off'"
+        "Naming enforcement: enforce/reject, warn/write with warnings, off/skip. Omit for project/global setting."
     ),
     (
         "Optional per-call override for naming enforcement: 'enforce' / 'warn' / 'off'. "
         "Omit to use the project/global setting.",
-        "Opitonal; Naming enforcement: enforce/warn/off",
+        "Naming enforcement: enforce/warn/off. Omit for project/global setting.",
     ),
     (
         "Validate and preview without modifying the program.",
@@ -74,6 +76,26 @@ _DESCRIPTION_REPLACEMENTS = (
         ""
     ),
     (
+        "Number of entries to skip before this page starts; 0 begins at the first entry. "
+        "Page by adding `limit` each call until offset reaches the `total` the response reports.",
+        "Entries to skip (0 = first). Advance by `limit` until offset reaches response `total`.",
+    ),
+    (
+        "Maximum entries returned in this page (default 100). Pass 0 or a negative value "
+        "for no limit; `total` in the response always reports the full unpaged count.",
+        "Page size (default 100); <=0 = unlimited. Response `total` is the unpaged count.",
+    ),
+    (
+        "Maximum entries returned in this page (default 500). Pass 0 or a negative value "
+        "for no limit; `total` in the response always reports the full unpaged count.",
+        "Page size (default 500); <=0 = unlimited. Response `total` is the unpaged count.",
+    ),
+    (
+        "Page size. 0 means no limit, which on a large binary is a megabytes-long response "
+        "— the old list_functions had no pagination at all and returned 1.7MB on a stripped `ls`.",
+        "Page size; 0 = unlimited (can return megabytes on large binaries).",
+    ),
+    (
         "List all physical address spaces in the program. On programs with multiple address spaces (e.g., embedded targets), use the returned space names to prefix addresses (e.g., mem:1000, code:ff00) for unambiguous resolution. Also check addressable_unit_size: a value > 1 means the space is word-addressed (e.g., AVR code space uses 2-byte words). MCP tools and Ghidra both use word addresses natively for such spaces — code:001478 is word 0x1478, not byte 0x1478. Do NOT multiply or divide addresses seen in Ghidra output; use them as-is. Overlay spaces are also listed, each marked is_overlay=true with its overlayed_space (base). Address an overlay location as <overlay>::<hex> (e.g., cli.Initial::00010000) — overlay names are case-sensitive.",
         "Use the returned space names to prefix addresses (e.g mem:1000, code:ff00)"
         "for unambiguous resolution. The returned result must be used AS-IS."
@@ -87,6 +109,8 @@ _DESCRIPTION_REPLACEMENTS = (
     ),
 )
 
+_DESCRIPTION_REPLACEMENTS += DESCRIPTION_REPLACEMENTS
+
 
 def _compact_description(description: str) -> str:
     for verbose, concise in _DESCRIPTION_REPLACEMENTS:
@@ -95,7 +119,7 @@ def _compact_description(description: str) -> str:
 
 
 def _compact_input_schema(schema: dict) -> dict:
-    """Copy a JSON Schema for publication, dropping titles and repeated prose.
+    """Copy a JSON Schema, dropping titles, empty descriptions and repeated prose.
 
     Walk schema keywords only: a property named ``title`` is an argument, and
     default/enum/example objects are data, not schemas. Defaults, constraints,
@@ -103,7 +127,11 @@ def _compact_input_schema(schema: dict) -> dict:
     """
     compact = {key: value for key, value in schema.items() if key != "title"}
     if isinstance(compact.get("description"), str):
-        compact["description"] = _compact_description(compact["description"])
+        description = _compact_description(compact["description"])
+        if description.strip():
+            compact["description"] = description
+        else:
+            compact.pop("description")
     for key in ("properties", "patternProperties", "$defs", "definitions", "dependentSchemas"):
         if isinstance(compact.get(key), dict):
             compact[key] = {
