@@ -3,6 +3,119 @@
 from .config import STATIC_TOOL_NAMES, _ALL_STATIC_TOOL_NAMES
 from .validation import sanitize_tool_name, _allocate_tool_name
 
+# Temporarily hide upstream tools by their exact MCP-visible name. Add/remove
+# names here, then restart the bridge. Static bridge tools are unaffected.
+DISABLED_TOOL_NAMES = {
+    "ghidra_clear_flow_and_repair", # schema bloated + not frequently used
+}
+
+# Only replace known boilerplate. Tool-specific qualifications must survive;
+# truncating descriptions or rewriting by parameter name can hide real rules.
+_DESCRIPTION_REPLACEMENTS = (
+    (
+        "Accepts 0x<hex> (default space) or <space>:<hex> (e.g., mem:1000, code:ff00). "
+        "Note: some programs — particularly embedded/microcontroller targets — are not "
+        "address-space-agnostic; use get_address_spaces to discover spaces before "
+        "assuming a plain hex address is unambiguous.",
+        "0x<hex> (default space) or <address_spaces>:<hex>; (code:ff00)",
+    ),
+    (
+        "Target program name (omit to use the active program — always specify when multiple programs are open)",
+        "Program name; omit for active; specify when multiple programs are open",
+    ),
+    (
+        "Target program name (omit to use the active program)",
+        "Program name; omit for active",
+    ),
+    (
+        "Target program name (omit for active program).",
+        "Program name; omit for active.",
+    ),
+    (
+        "Preview the change without applying it. When true the server validates the request "
+        "and reports what would happen, leaving the program unmodified. Defaults to false.",
+        "Validate and preview without modifying the program.",
+    ),
+    (
+        "Optional per-call override for naming enforcement: 'enforce' (reject low-quality names), "
+        "'warn' (write goes through with warnings), or 'off' (skip validation entirely). "
+        "Omit to use the project/global setting.",
+        "Naming: enforce=reject low-quality names, warn=write with warnings, off=skip validation. "
+        "Omit for project/global setting.",
+    ),
+    (
+        "Optional per-call override for naming enforcement: 'enforce' / 'warn' / 'off'. "
+        "Omit to use the project/global setting.",
+        "Naming: enforce/warn/off; omit for project/global setting.",
+    ),
+    (
+        "Validate and preview without modifying the program.",
+        "dryrun"
+    ),
+    (
+        "Address in the program. ",
+        ""
+    ),
+    (
+        "Create a structure data type. Body fields must be a JSON array of objects; each object needs name and type, with optional offset. Example fields: [{\"name\":\"dwId\",\"type\":\"uint\",\"offset\":0},{\"name\":\"pNext\",\"type\":\"void *\",\"offset\":4}]. Type may be any resolvable Ghidra data type or existing struct name. Set replace_placeholder=true to delete a 1-byte demangler/placeholder type with the same name before creating. To change size of an existing struct in place, use resize_struct; for atomic delete+recreate, use recreate_struct (see docs/STRUCT_RESIZE_WORKFLOW.md).",
+        "Create a structure data type. Body fields must be a JSON array of objects; each object needs name and type, with optional offset. Example fields: [{\"name\":\"dwId\",\"type\":\"uint\",\"offset\":0},{\"name\":\"pNext\",\"type\":\"void *\",\"offset\":4}]. Type may be any resolvable Ghidra data type or existing struct name. Set replace_placeholder=true to delete a 1-byte demangler/placeholder type with the same name before creating. To change size of an existing struct in place, use resize_struct; for atomic delete+recreate, use recreate_struct"
+    ),
+    (
+        "Program name; omit for active; specify when multiple programs are open",
+        "Target program name, omit for active"
+    ),
+    (
+        "List all physical address spaces in the program. On programs with multiple address spaces (e.g., embedded targets), use the returned space names to prefix addresses (e.g., mem:1000, code:ff00) for unambiguous resolution. Also check addressable_unit_size: a value > 1 means the space is word-addressed (e.g., AVR code space uses 2-byte words). MCP tools and Ghidra both use word addresses natively for such spaces — code:001478 is word 0x1478, not byte 0x1478. Do NOT multiply or divide addresses seen in Ghidra output; use them as-is. Overlay spaces are also listed, each marked is_overlay=true with its overlayed_space (base). Address an overlay location as <overlay>::<hex> (e.g., cli.Initial::00010000) — overlay names are case-sensitive.",
+        "Use the returned space names to prefix addresses (e.g mem:1000, code:ff00)"
+        "for unambiguous resolution. The returned result must be used AS-IS."
+        "Used for program with multiple address spaces"
+    ),
+    (
+        "Bulk merge: copy ALL RE documentation from one program to another at matching addresses, in a single server-side transaction. Categories: function names + signatures + plate comments + locals + calling convention + no-return + tags; standalone data types; data definitions (typed globals); plate comments at any address; comments at all 4 types (EOL/PRE/POST/REPEATABLE) on instructions AND data; labels & globals (with namespace preservation); external locations (ordinal renames); bookmarks; equates. Designed for the orphan-rescue workflow: source is typically '<name>_recovered', target is the original '<name>.dll'. Idempotent — re-running on an already-merged target only fills gaps. Set dry_run=true to count without writing.",
+        "copy all RE documentation from one program to another, at matching addresses "
+        "Designed for the orphan-rescue workflow: source is typically '<name>_recovered', target is the original '<name>.dll' "
+        "the action is Idempotent"
+    ),
+)
+
+
+def _compact_description(description: str) -> str:
+    for verbose, concise in _DESCRIPTION_REPLACEMENTS:
+        description = description.replace(verbose, concise)
+    return description
+
+
+def _compact_input_schema(schema: dict) -> dict:
+    """Copy a JSON Schema for publication, dropping titles and repeated prose.
+
+    Walk schema keywords only: a property named ``title`` is an argument, and
+    default/enum/example objects are data, not schemas. Defaults, constraints,
+    required fields and nullable unions are kept as generated by FastMCP.
+    """
+    compact = {key: value for key, value in schema.items() if key != "title"}
+    if isinstance(compact.get("description"), str):
+        compact["description"] = _compact_description(compact["description"])
+    for key in ("properties", "patternProperties", "$defs", "definitions", "dependentSchemas"):
+        if isinstance(compact.get(key), dict):
+            compact[key] = {
+                name: _compact_input_schema(value) if isinstance(value, dict) else value
+                for name, value in compact[key].items()
+            }
+    for key in (
+        "items", "additionalItems", "additionalProperties", "unevaluatedProperties",
+        "unevaluatedItems", "contains", "propertyNames", "not", "if", "then", "else", "contentSchema",
+    ):
+        if isinstance(compact.get(key), dict):
+            compact[key] = _compact_input_schema(compact[key])
+    for key in ("allOf", "anyOf", "oneOf", "prefixItems", "items"):
+        if isinstance(compact.get(key), list):
+            compact[key] = [
+                _compact_input_schema(value) if isinstance(value, dict) else value
+                for value in compact[key]
+            ]
+    return compact
+
+
 # JSON type → Python type mapping
 _TYPE_MAP = {
     "string": str,

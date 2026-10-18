@@ -21,7 +21,7 @@ from .config import (
     _ALL_STATIC_TOOL_NAMES,
     logger,
 )
-from .schema import _TYPE_MAP, _normalize_tool_def_names, _parse_schema
+from .schema import DISABLED_TOOL_NAMES, _TYPE_MAP, _normalize_tool_def_names, _parse_schema
 from .server import Context, mcp
 from .validation import sanitize_address, validate_tool_name
 
@@ -318,6 +318,8 @@ def _start_progress_heartbeat(ctx: Context | None, tool_name: str):
 def _register_tool_def(tool_def: dict) -> bool:
     """Register a single tool from a schema definition. Returns True if registered."""
     name = tool_def["name"]
+    if name in DISABLED_TOOL_NAMES:
+        return False
     validate_tool_name(name)
     if name in STATIC_TOOL_NAMES:
         return False  # Don't overwrite an *active* static tool of the same name
@@ -430,8 +432,12 @@ def register_tools_from_schema(schema: list[dict], groups: set[str] | None = Non
         state._dynamic_tool_names.clear()
         state._loaded_groups.clear()
 
-        # Store full schema for lazy loading
-        state._full_schema = _normalize_tool_def_names(schema)
+        # Filter after name allocation so disabling a colliding name cannot
+        # rename another tool. Keep disabled tools out of discovery/lazy loading.
+        state._full_schema = [
+            tool_def for tool_def in _normalize_tool_def_names(schema)
+            if tool_def["name"] not in DISABLED_TOOL_NAMES
+        ]
 
         count = 0
         failures: list[str] = []

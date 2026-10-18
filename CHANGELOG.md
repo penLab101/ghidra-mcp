@@ -32,6 +32,20 @@ the 235-tool schema recording); the figures above are the current ones.
 > the *cause* of a change here (`uv.lock`'s stale dependency group, the
 > release workflows' dangling paths, the benchmark fixture that left with it).
 
+### Changed — Smaller MCP tool schemas
+
+- Added a bridge-side `DISABLED_TOOL_NAMES` set in `schema.py` for temporarily
+  excluding upstream tools from registration, discovery and lazy loading.
+  `ghidra_clear_flow_and_repair` is disabled by default; remove its name and
+  restart the bridge to restore it.
+- The Python bridge removes generated JSON Schema titles and shortens repeated
+  address, program, naming-mode and dry-run guidance in `tools/list`, including
+  paginated responses and tools loaded after startup. Tool arguments, defaults,
+  validation and safety annotations are preserved. The same explicit description
+  replacements also apply to tool descriptions; stored descriptions and
+  `/mcp/schema` keep the original documentation. On the 2026-10-18 captured
+  request, the 205 Ghidra tool definitions shrink by approximately 30%.
+
 ### Changed — Diablo II–specific content removed (#562)
 
 This project is a generic Ghidra MCP server; game-specific tooling lives elsewhere.
