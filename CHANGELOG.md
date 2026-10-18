@@ -34,6 +34,13 @@ the 235-tool schema recording); the figures above are the current ones.
 
 ### Changed — Smaller MCP tool schemas
 
+- Script-listing integration checks now reject the legacy GUI-instructions
+  placeholder and verify filesystem result fields, so a stale installed plugin
+  cannot pass merely by returning HTTP 200.
+- `local-build.ps1` now installs the built extension into the matching Ghidra
+  user profile, backs up the previous extension, and fails clearly if Ghidra
+  locks its JAR. Use `-SkipInstall` for a build without installation.
+
 - Set `GHIDRA_MCP_SYNTHETIC_DRY_RUN=0` in the bridge's environment to stop
   appending a synthetic `dry_run` input to POST tools. The default behavior and
   tools that explicitly declare `dry_run` are preserved.

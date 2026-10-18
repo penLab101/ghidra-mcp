@@ -383,9 +383,23 @@ class TestScripts:
     """Test script listing endpoints (read-only)."""
 
     def test_list_scripts(self, http_client):
-        """List available scripts."""
+        """Require filesystem results, including when no scripts are installed."""
         response = http_client.get("/list_scripts")
         assert response.status_code == 200
+        data = response.json()
+        assert "instructions" not in data, (
+            "Legacy script-listing placeholder: update the installed GhidraMCP "
+            "extension and restart Ghidra. " + response.text
+        )
+        assert isinstance(data["scripts"], list)
+        assert data["count"] == len(data["scripts"])
+        assert data["filter"] == "none"
+        assert isinstance(data["searched_dirs"], list)
+        assert data["searched_dirs"]
+        for script in data["scripts"]:
+            assert {"name", "path", "size", "modified"} <= script.keys()
+            assert script["name"].endswith((".java", ".py"))
+            assert isinstance(script["size"], int)
 
     def test_list_scripts_with_filter(self, http_client):
         """`filter` is the endpoint's only declared parameter.
@@ -397,6 +411,9 @@ class TestScripts:
         """
         response = http_client.get("/list_scripts", params={"filter": "Backfill"})
         assert response.status_code == 200
+        data = response.json()
+        assert isinstance(data["scripts"], list), response.text
+        assert data["count"] == len(data["scripts"])
 
 
 class TestCallGraph:

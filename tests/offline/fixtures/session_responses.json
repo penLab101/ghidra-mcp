@@ -88,7 +88,9 @@
 
   "/list_scripts": {
     "count": 1,
-    "scripts": [{ "name": "FakeOfflineScript.java", "category": "Examples" }]
+    "filter": "none",
+    "searched_dirs": ["/FakeOffline/ghidra_scripts"],
+    "scripts": [{ "name": "FakeOfflineScript.java", "path": "/FakeOffline/ghidra_scripts/FakeOfflineScript.java", "size": 42, "modified": "Sun Oct 18 00:00:00 UTC 2026" }]
   },
 
   "/list_ghidra_scripts": {
