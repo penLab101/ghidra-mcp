@@ -21,15 +21,15 @@ _DESCRIPTION_REPLACEMENTS = (
     ),
     (
         "Target program name (omit to use the active program — always specify when multiple programs are open)",
-        "Program name; omit for active; specify when multiple programs are open",
+        "",
     ),
     (
         "Target program name (omit to use the active program)",
-        "Program name; omit for active",
+        "",
     ),
     (
         "Target program name (omit for active program).",
-        "Program name; omit for active.",
+        "",
     ),
     (
         "Preview the change without applying it. When true the server validates the request "
@@ -62,7 +62,11 @@ _DESCRIPTION_REPLACEMENTS = (
     ),
     (
         "Program name; omit for active; specify when multiple programs are open",
-        "Target program name, omit for active"
+        ""
+    ),
+    (
+        "Target program name",
+        ""
     ),
     (
         "List all physical address spaces in the program. On programs with multiple address spaces (e.g., embedded targets), use the returned space names to prefix addresses (e.g., mem:1000, code:ff00) for unambiguous resolution. Also check addressable_unit_size: a value > 1 means the space is word-addressed (e.g., AVR code space uses 2-byte words). MCP tools and Ghidra both use word addresses natively for such spaces — code:001478 is word 0x1478, not byte 0x1478. Do NOT multiply or divide addresses seen in Ghidra output; use them as-is. Overlay spaces are also listed, each marked is_overlay=true with its overlayed_space (base). Address an overlay location as <overlay>::<hex> (e.g., cli.Initial::00010000) — overlay names are case-sensitive.",
