@@ -34,6 +34,9 @@ the 235-tool schema recording); the figures above are the current ones.
 
 ### Changed — Smaller MCP tool schemas
 
+- Added `detect_array_bounds`, `force_decompile` and `get_function_count` to
+  `HIDE_OPTIONAL_TOOL_NAMES`. Use `get_functions` for decompilation and
+  `get_metadata` for function counts; HTTP endpoints remain available.
 - Disabled the unimplemented `find_dead_code` and `detect_crypto_constants`,
   schema/health diagnostics `mcp_schema` and `mcp_health`, and GUI automation
   `prompt_policy` through `DISABLED_TOOL_NAMES`. Added `tool_running_tools`,

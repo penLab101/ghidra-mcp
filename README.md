@@ -535,6 +535,9 @@ To temporarily disable individual upstream tools, edit `DISABLED_TOOL_NAMES` in
 project housekeeping, property-map tools and GUI window inventory; remove names
 there to restore them. It also hides `can_rename_at_address` and
 `find_next_undefined_function`, which overlap existing edit/discovery tools.
+The array-bound heuristic `detect_array_bounds` is hidden, along with
+`force_decompile` and `get_function_count`; use `get_functions` for decompilation
+and `get_metadata` for function counts.
 The two sets are combined for filtering. Use exact bridge names
 before client-added prefixes such as `ghidra_`. The additional exclusions include
 `clear_flow_and_repair`, the unimplemented `find_dead_code` and

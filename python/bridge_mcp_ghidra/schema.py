@@ -11,6 +11,10 @@ HIDE_OPTIONAL_TOOL_NAMES = {
     # Local computation and basic naming heuristics.
     "convert_number",
     "suggest_field_names",
+    "detect_array_bounds",
+    # Overlapping decompilation and program metadata reads.
+    "force_decompile",
+    "get_function_count",
     # Overlapping discovery/preflight helpers and GUI window inventory.
     "find_next_undefined_function",
     "can_rename_at_address",
