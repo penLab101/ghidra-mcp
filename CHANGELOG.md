@@ -41,7 +41,13 @@ the 235-tool schema recording); the figures above are the current ones.
   source, a working Java class template, `getScriptArgs()`, literal whitespace
   splitting, cooperative timeout, JSON results and cached build diagnostics.
   `list_scripts` documents filesystem discovery and filtering; use its returned
-  paths to run built-ins. Both runners document the rejection of `dry_run=true`.
+  paths to run listed scripts. Both runners document the rejection of `dry_run=true`.
+- Script discovery and filename lookup search only `~/ghidra_scripts`; scripts
+  elsewhere, including built-ins, require an explicit path. Removed stale catalog
+  claims about searching the working directory and installation bundles.
+- The local PowerShell build helper disables Gradle's optional HTML problems
+  report to avoid an access-denied failure after successful compilation, resolves
+  repository paths from the script location, and propagates the build exit code.
 - Added a bridge-side `DISABLED_TOOL_NAMES` set in `schema.py` for temporarily
   excluding upstream tools from registration, discovery and lazy loading.
   `ghidra_clear_flow_and_repair` is disabled by default; remove its name and

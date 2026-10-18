@@ -14,15 +14,10 @@ import java.util.Map;
  * {@code /list_scripts} (v7.0.0) must return real filesystem entries, not the old
  * "open the Script Manager" stub text.
  *
- * <p>The handler walks three sources: {@code ~/ghidra_scripts}, {@code ./ghidra_scripts}
- * (the process CWD), and every {@code <install>/Ghidra Features/<bundle>/ghidra_scripts}.
- * Only the first is controllable offline, so each test points {@code user.home} at a temp
- * dir. The repo's own {@code ./ghidra_scripts} and the real install bundle are still
- * searched too — the tests therefore never assert a global {@code count}, only that the
- * temp dir's own files appear (or don't) with the right metadata. That is enough: the stub
- * returned zero {@code scripts} entries and an {@code instructions} key, so any real entry
- * proves the handler is walking the filesystem, and the shape/filter tests use unique names
- * that cannot collide with anything else on the path. Pure filesystem — no Ghidra, no Swing.
+ * <p>The handler searches only {@code ~/ghidra_scripts}, without recursion.
+ * Each test points {@code user.home} at a temporary directory. The working
+ * directory and Ghidra installation must not contribute additional scripts.
+ * Pure filesystem — no Ghidra, no Swing.
  */
 public class ListGhidraScriptsOfflineTest extends TestCase {
 
@@ -100,11 +95,11 @@ public class ListGhidraScriptsOfflineTest extends TestCase {
         assertTrue("must report a count", data.containsKey("count"));
         assertTrue("must report scripts", data.containsKey("scripts"));
 
-        // My two temp files must be present (whatever else the other sources add).
+        // Discovery is restricted to the user scripts directory.
         List<Map<String, Object>> mine = mine(data);
         assertEquals(2, mine.size());
-        // count reflects the union of all sources, so it must at least cover mine.
-        assertTrue(((Number) data.get("count")).intValue() >= 2);
+        assertEquals(2, ((Number) data.get("count")).intValue());
+        assertEquals(List.of(scriptsDir.getAbsolutePath()), data.get("searched_dirs"));
     }
 
     public void testEachEntryCarriesNamePathSizeModified() throws Exception {
@@ -161,8 +156,9 @@ public class ListGhidraScriptsOfflineTest extends TestCase {
 
         Map<String, Object> data = okData(svc.listGhidraScripts(""));
 
-        // No entries can come from my (now-absent) dir; other sources may still add some.
+        // A missing home scripts directory must not fall back to other locations.
         assertTrue(mine(data).isEmpty());
+        assertEquals(0, ((Number) data.get("count")).intValue());
         // searched_dirs still lists the attempted location for diagnosability.
         assertTrue(data.get("searched_dirs") instanceof List);
     }

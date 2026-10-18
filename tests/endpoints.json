@@ -2144,7 +2144,7 @@
         "gui",
         "headless"
       ],
-      "description": "List .java and .py script files on the Ghidra host, without recursion. Searches ~/ghidra_scripts, <cwd>/ghidra_scripts and, when the installation path is known, <ghidra_install>/Ghidra/Features/*/ghidra_scripts. Returns JSON {count, filter, searched_dirs, scripts: [{name, path, size, modified}]}. Pass a returned path to run_ghidra_script. Listing does not verify that a script can run."
+      "description": "List .java and .py script files on the Ghidra host, without recursion. Searches only ~/ghidra_scripts. Returns JSON {count, filter, searched_dirs, scripts: [{name, path, size, modified}]}. Pass a returned path to run_ghidra_script. Listing does not verify that a script can run."
     },
     {
       "path": "/list_shadowed_globals",

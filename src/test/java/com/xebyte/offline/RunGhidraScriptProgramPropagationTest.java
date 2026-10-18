@@ -61,17 +61,34 @@ public class RunGhidraScriptProgramPropagationTest extends TestCase {
             throw new AssertionError(
                     "Could not locate @McpTool path=\"" + mcpPath + "\"");
         }
-        // Walk forward to the first '{' that opens the body, then brace-match.
-        int i = src.indexOf('{', m.end());
+        // Mask literals and comments so JSON examples in annotations and braces
+        // in strings inside the method cannot be mistaken for Java syntax.
+        Pattern nonCode = Pattern.compile(
+                "\"(?:\\\\.|[^\"\\\\])*\"|'(?:\\\\.|[^'\\\\])*'|//[^\\r\\n]*|/\\*.*?\\*/",
+                Pattern.DOTALL);
+        StringBuilder masked = new StringBuilder(src);
+        Matcher ignored = nonCode.matcher(src);
+        while (ignored.find()) {
+            for (int k = ignored.start(); k < ignored.end(); k++) masked.setCharAt(k, ' ');
+        }
+        int i = masked.indexOf("{", m.end());
         if (i < 0) throw new AssertionError("No body opener for " + mcpPath);
         int depth = 1;
         int j = i + 1;
         while (j < src.length() && depth > 0) {
-            char c = src.charAt(j++);
+            char c = masked.charAt(j++);
             if (c == '{') depth++;
             else if (c == '}') depth--;
         }
         return src.substring(i, j);
+    }
+
+    public void testMethodExtractionIgnoresAnnotationExamplesAndQuotedBraces() {
+        String src = "@McpTool(path = \"/example\", description = \"JSON {success}\") "
+                + "public Response example(@Param(description = \"{name}\") String name) { "
+                + "String text = \"}\\\"{\"; /* } */ // {\nreturn Response.ok(text); }";
+        assertEquals(src.substring(src.indexOf("{ String")),
+                extractAnnotatedMethodBody(src, "/example"));
     }
 
     public void testRunGhidraScriptWithCaptureForwardsProgramName() throws IOException {
