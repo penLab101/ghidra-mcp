@@ -42,6 +42,8 @@ public class FrontEndProgramProvider extends ProjectProgramProvider {
     // Current program when no CodeBrowser has one: the first program opened on demand,
     // or the one /switch_program selected. CodeBrowser focus always wins over it.
     private volatile Program currentProgram;
+    // Read focus from the CodeBrowser selected by switch_program before other windows.
+    private volatile ProgramManager selectedProgramManager;
 
     /**
      * @param tool     the FrontEnd tool
@@ -89,7 +91,15 @@ public class FrontEndProgramProvider extends ProjectProgramProvider {
 
     @Override
     public Program getCurrentProgram() {
-        for (ProgramManager pm : findAllCodeBrowserProgramManagers()) {
+        List<ProgramManager> managers = findAllCodeBrowserProgramManagers();
+        ProgramManager selected = selectedProgramManager;
+        if (managers.contains(selected)) {
+            Program p = selected.getCurrentProgram();
+            if (p != null) {
+                return p;
+            }
+        }
+        for (ProgramManager pm : managers) {
             Program p = pm.getCurrentProgram();
             if (p != null) {
                 return p;
@@ -100,19 +110,33 @@ public class FrontEndProgramProvider extends ProjectProgramProvider {
 
     @Override
     public void setCurrentProgram(Program program) {
-        this.currentProgram = program;
         if (program == null) {
+            currentProgram = null;
+            selectedProgramManager = null;
             return;
         }
+        List<ProgramManager> managers = findAllCodeBrowserProgramManagers();
         // Focus the CodeBrowser that actually has it open.
-        for (ProgramManager pm : findAllCodeBrowserProgramManagers()) {
+        for (ProgramManager pm : managers) {
             for (Program p : pm.getAllOpenPrograms()) {
                 if (p == program) {
                     pm.setCurrentProgram(program);
+                    selectedProgramManager = pm;
+                    currentProgram = program;
                     return;
                 }
             }
         }
+        // A program opened through the project cache may not be in any window yet.
+        // Show the same instance in an existing CodeBrowser so its focus can change.
+        if (!managers.isEmpty()) {
+            ProgramManager pm = managers.contains(selectedProgramManager)
+                ? selectedProgramManager : managers.get(0);
+            pm.openProgram(program);
+            pm.setCurrentProgram(program);
+            selectedProgramManager = pm;
+        }
+        currentProgram = program;
     }
 
     /** ProgramManagers of every running CodeBrowser; the FrontEnd tool has none of its own. */
@@ -142,6 +166,9 @@ public class FrontEndProgramProvider extends ProjectProgramProvider {
     @Override
     public ProgramManager findProgramManager() {
         List<ProgramManager> managers = findAllCodeBrowserProgramManagers();
+        if (managers.contains(selectedProgramManager)) {
+            return selectedProgramManager;
+        }
         return managers.isEmpty() ? null : managers.get(0);
     }
 

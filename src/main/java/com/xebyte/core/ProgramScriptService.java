@@ -1539,11 +1539,15 @@ public class ProgramScriptService {
             ));
         }
 
-        programProvider.setCurrentProgram(targetProgram);
+        try {
+            threadingStrategy.runOnUi(() -> programProvider.setCurrentProgram(targetProgram));
+        } catch (Exception e) {
+            Throwable cause = e.getCause() != null ? e.getCause() : e;
+            return Response.err("Failed to switch program: " + cause.getMessage());
+        }
         // Headless keeps no current program by design (a sticky one made a 17-program
-        // survey report one binary's numbers seventeen times), and a GUI program no
-        // CodeBrowser shows cannot outrank the one that does. This used to answer
-        // success anyway.
+        // survey report one binary's numbers seventeen times). Verify the provider
+        // actually selected the target rather than reporting success for a no-op.
         if (programProvider.getCurrentProgram() != targetProgram) {
             return Response.err("This server did not switch to " + targetProgram.getName()
                 + ": it has no settable current program here. Pass program=\""

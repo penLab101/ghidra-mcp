@@ -32,6 +32,14 @@ the 235-tool schema recording); the figures above are the current ones.
 > the *cause* of a change here (`uv.lock`'s stale dependency group, the
 > release workflows' dangling paths, the benchmark fixture that left with it).
 
+### Fixed — Switching GUI programs
+
+- `switch_program` now shows a cached target in an existing CodeBrowser and
+  reads focus from the selected CodeBrowser when multiple windows are open.
+  Previously these cases could report "no settable current program" for a valid
+  target. ProgramManager changes run on the UI thread; headless behavior and
+  explicit-program requirements for multi-program calls remain unchanged.
+
 ### Changed — Smaller MCP tool schemas
 
 - Added `detect_array_bounds`, `force_decompile` and `get_function_count` to
