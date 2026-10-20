@@ -2229,6 +2229,11 @@ public class ProgramScriptService {
     }
 
     public Response runGhidraScript(String scriptPath, String scriptArgs, String programName, int timeoutSeconds) {
+        return runGhidraScript(scriptPath, scriptArgs, programName, timeoutSeconds, false);
+    }
+
+    private Response runGhidraScript(String scriptPath, String scriptArgs, String programName,
+                                    int timeoutSeconds, boolean isolatedInline) {
         // Defense in depth: the script-execution gate belongs on the sink, not
         // only on the callers. runGhidraScriptWithCapture already checks this
         // before delegating here; enforcing it again means no current or future
@@ -2238,6 +2243,9 @@ public class ProgramScriptService {
             return Response.err("Script execution disabled. Set GHIDRA_MCP_ALLOW_SCRIPTS=1 "
                 + "(and GHIDRA_MCP_AUTH_TOKEN if exposing beyond loopback) to enable. "
                 + "runGhidraScript executes any script resolvable via the Ghidra script path.");
+        }
+        if (scriptPath == null || !scriptPath.toLowerCase(Locale.ROOT).endsWith(".java")) {
+            return Response.err("Only Support Java Ghidra scripts");
         }
         ServiceUtils.ProgramOrError pe = ServiceUtils.getProgramOrError(programProvider, programName);
         if (pe.hasError()) return pe.error();
@@ -2255,9 +2263,11 @@ public class ProgramScriptService {
         // stops replaying their stale compile errors on this run. Previously
         // only runScriptInline purged; run_ghidra_script never did, so one
         // failed inline run poisoned every later script run.
-        try {
-            purgeStaleInlineScripts(new File(System.getProperty("user.home"), "ghidra_scripts"), System.currentTimeMillis());
-        } catch (Throwable ignore) { /* purge is best-effort; never block a run */ }
+        if (!isolatedInline) {
+            try {
+                purgeStaleInlineScripts(new File(System.getProperty("user.home"), "ghidra_scripts"), System.currentTimeMillis());
+            } catch (Throwable ignore) { /* purge is best-effort; never block a run */ }
+        }
 
         // Track whether we copied the script (for cleanup)
         final File[] copiedScript = {null};
@@ -2322,17 +2332,19 @@ public class ProgramScriptService {
                     // copy it there so Ghidra's OSGi class loader can find the source bundle.
                     File scriptFileForExecution = resolvedFile;
                     try {
-                        ghidraScriptsDir.mkdirs();
-                        String canonicalScriptsDir = ghidraScriptsDir.getCanonicalPath();
-                        String canonicalResolved = resolvedFile.getCanonicalPath();
-                        if (!canonicalResolved.startsWith(canonicalScriptsDir + File.separator)) {
-                            // Copy to ~/ghidra_scripts/
-                            File dest = new File(ghidraScriptsDir, resolvedFile.getName());
-                            java.nio.file.Files.copy(resolvedFile.toPath(), dest.toPath(),
-                                java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-                            scriptFileForExecution = dest;
-                            copiedScript[0] = dest;
-                            resultMsg.append("Copied to: ").append(dest.getAbsolutePath()).append("\n");
+                        if (!isolatedInline) {
+                            ghidraScriptsDir.mkdirs();
+                            String canonicalScriptsDir = ghidraScriptsDir.getCanonicalPath();
+                            String canonicalResolved = resolvedFile.getCanonicalPath();
+                            if (!canonicalResolved.startsWith(canonicalScriptsDir + File.separator)) {
+                                // Copy to ~/ghidra_scripts/
+                                File dest = new File(ghidraScriptsDir, resolvedFile.getName());
+                                java.nio.file.Files.copy(resolvedFile.toPath(), dest.toPath(),
+                                    java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                                scriptFileForExecution = dest;
+                                copiedScript[0] = dest;
+                                resultMsg.append("Copied to: ").append(dest.getAbsolutePath()).append("\n");
+                            }
                         }
                     } catch (Exception e) {
                         resultMsg.append("Warning: Could not copy script to ~/ghidra_scripts/: ").append(e.getMessage()).append("\n");
@@ -2360,11 +2372,6 @@ public class ProgramScriptService {
                     ghidra.app.script.GhidraScriptProvider provider = ghidra.app.script.GhidraScriptUtil.getProvider(scriptFile);
                     if (provider == null) {
                         resultMsg.append("ERROR: No script provider found for: ").append(scriptFile.getName()).append("\n");
-                        if (scriptFile.getName().toLowerCase(java.util.Locale.ROOT).endsWith(".py")) {
-                            resultMsg.append("Ghidra 12.1 ships Jython as an optional extension. ")
-                                    .append("Install the Jython extension from File > Install Extensions, ")
-                                    .append("restart Ghidra, then refresh Script Manager before running .py scripts.\n");
-                        }
                         return;
                     }
 
@@ -2411,7 +2418,13 @@ public class ProgramScriptService {
                     resultMsg.append("\n--- SCRIPT OUTPUT ---\n");
 
                     // Execute the script
-                    script.runScript(scriptFile.getName(), args);
+                    if (isolatedInline) {
+                        // Execute the instance already compiled/loaded above. runScript(name)
+                        // looks up and loads a second instance, possibly from another bundle.
+                        script.execute(scriptState, scriptMonitor, scriptPrintWriter);
+                    } else {
+                        script.runScript(scriptFile.getName(), args);
+                    }
 
                     // Get script output
                     String scriptOutput = scriptWriter.toString();
@@ -2543,8 +2556,8 @@ public class ProgramScriptService {
     }
 
     @McpTool(path = "/run_script_inline", dryRun = false, method = "POST",
-            description = "Compile and run temporary Java GhidraScript code. "
-                        + "Source is written under the Ghidra process's ~/ghidra_scripts and deleted after success; "
+            description = "Compile and run temporary Java GhidraScript code (Java only; Python/Jython is disabled). "
+                        + "Source is compiled in an isolated temporary bundle and discarded after success or failure. "
                         + "To reuse, save a separate script file "
                         + "then call run_ghidra_script. "
                         + "Requires GHIDRA_MCP_ALLOW_SCRIPTS=1. "
@@ -2552,11 +2565,11 @@ public class ProgramScriptService {
             category = "program", access = ToolAccess.WRITE)
     public Response runScriptInline(
             @Param(value = "code", source = ParamSource.BODY,
-                   description = "Java statements (auto-wrapped; put each import on its own line), or full source "
+                   description = "Java only, not Python/Jython: statements (auto-wrapped; put each import on its own line), or full source "
                                + "using this form: import ghidra.app.script.GhidraScript; "
                                + "public class UniqueName extends GhidraScript { "
                                + "@Override public void run() throws Exception { println(currentProgram.getName()); } }. "
-                               + "Use no package declaration and a unique class name; existing files are not overwritten.") String code,
+                               + "Use no package declaration. Each invocation uses an isolated source directory.") String code,
             @Param(value = "args", source = ParamSource.BODY, defaultValue = "",
                    description = "Whitespace-separated; not quote-aware: \"a b\" becomes two args "
                                + "with literal quotes. Read with getScriptArgs(), not an args field.") String args,
@@ -2573,34 +2586,20 @@ public class ProgramScriptService {
         // Use unique class name per invocation so Ghidra recompiles each time.
         // If user provides their own class, extract its name for the filename.
         String className = "McpInline_" + Long.toHexString(System.nanoTime());
-        boolean generatedName = true; // provenance: WE created this name just now
         java.util.regex.Matcher m = java.util.regex.Pattern
             .compile("public\\s+class\\s+(\\w+)").matcher(code);
         if (m.find()) {
             className = m.group(1);
-            generatedName = false; // caller-chosen name — provenance uncertain
         }
 
-        // Write to ~/ghidra_scripts/ so OSGi classloader can find the source bundle
-        File scriptsDir = new File(System.getProperty("user.home"), "ghidra_scripts");
-        scriptsDir.mkdirs();
-
-        purgeStaleInlineScripts(scriptsDir, System.currentTimeMillis());
-
+        // A separate source root prevents Ghidra from rebuilding the user's script bundle.
+        final File scriptsDir;
+        try {
+            scriptsDir = java.nio.file.Files.createTempDirectory("ghidra-mcp-inline-").toFile();
+        } catch (IOException e) {
+            return Response.err("Failed to create inline script directory: " + e.getMessage());
+        }
         File tempScript = new File(scriptsDir, className + ".java");
-        // Refuse to clobber a script this service did not create. `className` comes
-        // from the caller's own `public class Foo`, so without this check an inline
-        // script named after an existing hand-written script silently overwrites it.
-        // A leftover of ours is already gone by now (purge above), so anything still
-        // standing here belongs to the operator.
-        if (tempScript.exists()) {
-            return Response.err("Refusing to overwrite " + tempScript.getName()
-                + " in " + scriptsDir + ": that file was not created by /run_script_inline. "
-                + "Rename the class in your code, or remove the file if it is disposable.");
-        }
-
-        // Capture response so the finally block can decide success vs failure.
-        Response[] responseHolder = {null};
 
         try {
             // If code doesn't contain a class definition, wrap it.
@@ -2627,47 +2626,49 @@ public class ProgramScriptService {
             }
 
             java.nio.file.Files.writeString(tempScript.toPath(), scriptCode);
-            responseHolder[0] = runGhidraScript(tempScript.getAbsolutePath(), args, programName);
-            return responseHolder[0];
+            return runGhidraScript(tempScript.getAbsolutePath(), args, programName, 0, true);
         } catch (Exception e) {
             return Response.err("Failed to create inline script: " + e.getMessage());
         } finally {
-            if (!tempScript.exists()) {
-                // File was never written or was already cleaned up — nothing to do.
-            } else {
-                boolean succeeded = false;
-                if (responseHolder[0] instanceof Response.Ok ok && ok.data() instanceof Map<?, ?> dataMap) {
-                    succeeded = Boolean.TRUE.equals(dataMap.get("success"));
-                }
-                if (succeeded) {
-                    // Clean run: remove the source file immediately.
-                    if (!tempScript.delete()) tempScript.deleteOnExit();
-                } else if (generatedName) {
-                    // Failed run with a GENERATED McpInline_* name: provenance is
-                    // certain (we minted the name above), so delete immediately —
-                    // no oracle needed. The failed-build record Ghidra keeps for
-                    // this directory is cleared by the purge at the top of the
-                    // NEXT run; the file itself must not linger until then.
-                    if (!tempScript.delete()) tempScript.deleteOnExit();
-                } else {
-                    // Failed run with a CALLER-NAMED class: leave .java on disk for
-                    // the next run's pre-cleanup to remove (which will clear Ghidra's
-                    // build-state entry for it), and write an oracle so that cleanup
-                    // is instant rather than time-delayed. The oracle is what marks
-                    // the file as ours despite its non-generated name.
+            discardInlineBundle(scriptsDir);
+        }
+    }
+
+    /** Release the one-shot bundle and its compiled cache on every exit path. */
+    private static void discardInlineBundle(File scriptsDir) {
+        generic.jar.ResourceFile sourceDir = new generic.jar.ResourceFile(scriptsDir);
+        java.nio.file.Path compiledDir = null;
+        synchronized (SCRIPT_BUNDLE_HOST_LOCK) {
+            ghidra.app.plugin.core.osgi.BundleHost host =
+                ghidra.app.script.GhidraScriptUtil.getBundleHost();
+            if (host != null) {
+                ghidra.app.plugin.core.osgi.GhidraBundle bundle = host.getGhidraBundle(sourceDir);
+                if (bundle != null) {
+                    compiledDir = ghidra.app.plugin.core.osgi.GhidraSourceBundle
+                        .getCompiledBundlesDir().resolve(ghidra.app.plugin.core.osgi.GhidraSourceBundle
+                            .sourceDirHash(sourceDir));
                     try {
-                        File oracle = new File(scriptsDir, className + ".java_failed");
-                        String failureInfo = responseHolder[0] != null
-                            ? responseHolder[0].toJson()
-                            : "exception before script execution";
-                        java.nio.file.Files.writeString(oracle.toPath(), failureInfo);
-                    } catch (Exception oracleEx) {
-                        // Oracle write failed; fall back to immediate deletion so the file
-                        // doesn't linger forever without a matching oracle.
-                        if (!tempScript.delete()) tempScript.deleteOnExit();
+                        host.deactivateSynchronously(bundle.getLocationIdentifier());
+                    } catch (Exception e) {
+                        Msg.warn(ProgramScriptService.class, "Failed to deactivate inline bundle: " + e);
+                    } finally {
+                        host.remove(bundle);
                     }
                 }
             }
+        }
+        if (compiledDir != null) deleteInlineDirectory(compiledDir);
+        deleteInlineDirectory(scriptsDir.toPath());
+    }
+
+    private static void deleteInlineDirectory(java.nio.file.Path directory) {
+        if (!java.nio.file.Files.exists(directory)) return;
+        try (java.util.stream.Stream<java.nio.file.Path> files = java.nio.file.Files.walk(directory)) {
+            for (java.nio.file.Path path : files.sorted(Comparator.reverseOrder()).toList()) {
+                java.nio.file.Files.deleteIfExists(path);
+            }
+        } catch (IOException e) {
+            Msg.warn(ProgramScriptService.class, "Failed to discard inline script directory: " + e);
         }
     }
 
@@ -2686,7 +2687,7 @@ public class ProgramScriptService {
      * <p>Cases handled, for <em>any</em> class name rather than only {@code McpInline_*}:
      * <ol>
      *   <li>An oracle ({@code X.java_failed}) exists → a confirmed failure of ours. Only
-     *       this method writes oracles, so an oracle proves {@code X.java} was written by
+     *       earlier inline execution code wrote oracles, so an oracle proves {@code X.java} was written by
      *       {@code /run_script_inline}; delete both. This is the case that used to be
      *       missed: a script declaring {@code public class Foo} produced {@code Foo.java},
      *       which the old {@code McpInline_} prefix filter skipped forever.</li>
@@ -2699,7 +2700,8 @@ public class ProgramScriptService {
      * Orphaned oracles whose {@code .java} is already gone are purged too.
      *
      * <p>Static, and side-effect-scoped to {@code scriptsDir}, so {@code InlineScriptCleanupTest}
-     * can drive it against a temporary directory. Public only because the offline tests live
+     * can drive it against a temporary directory. Retained for legacy files encountered by
+     * persistent script execution. Public only because the offline tests live
      * in {@code com.xebyte.offline}; it is not part of the endpoint surface.
      *
      * @param scriptsDir the script directory to sweep
@@ -2741,7 +2743,7 @@ public class ProgramScriptService {
      * @return JSON list of available scripts
      */
     @McpTool(path = "/list_scripts",
-            description = "List .java and .py script files on the Ghidra host, no recursion. "
+            description = "List Java (.java) script files on the Ghidra host, no recursion. "
                         + "Searches only ~/ghidra_scripts. "
                         + "Returns JSON {count, filter, searched_dirs, scripts: [{name, path, size, modified}]}. "
                         + "Pass a returned path to run_ghidra_script. Listing does not verify that a script can run.",
@@ -2758,7 +2760,7 @@ public class ProgramScriptService {
         for (String dirPath : seenDirs) {
             searched.add(dirPath);
             File dir = new File(dirPath);
-            File[] files = dir.isDirectory() ? dir.listFiles((d, n) -> n.endsWith(".java") || n.endsWith(".py")) : null;
+            File[] files = dir.isDirectory() ? dir.listFiles((d, n) -> n.endsWith(".java")) : null;
             if (files == null) continue;
             for (File f : files) {
                 String name = f.getName();
@@ -3583,7 +3585,7 @@ public class ProgramScriptService {
     }
 
     @McpTool(path = "/run_ghidra_script", dryRun = false, method = "POST",
-            description = "Run an existing Ghidra script file by filename or path. "
+            description = "Run an existing Java Ghidra script file by filename or path. "
                         + "The file must already exist on the Ghidra host; use run_script_inline for temporary new source. "
                         + "Returns JSON {success, script_name, script_path, execution_time_seconds, "
                         + "output_captured, console_output?}; "
@@ -3593,7 +3595,7 @@ public class ProgramScriptService {
 @Param(value = "script_name", source = ParamSource.BODY,
                    description = "Filename searched in ~/ghidra_scripts "
                                + "then tried as a path as-is (no ~ expansion). For scripts outside that directory, "
-                               + "including built-ins, supply their path. Include .java or .py; names without a dot also try .java, .py, then bare. "
+                               + "including built-ins, supply their path. Include .java; names without a dot also try .java, then bare. Python/Jython is disabled. "
                                + "For Java, the public GhidraScript subclass name must match the filename.") String scriptName,
             
 @Param(value = "args", source = ParamSource.BODY, defaultValue = "",
@@ -3617,6 +3619,9 @@ public class ProgramScriptService {
         if (scriptName == null || scriptName.isEmpty()) {
             return Response.err("Script name is required");
         }
+        if (scriptName.toLowerCase(Locale.ROOT).endsWith(".py")) {
+            return Response.err("Only Java (.java) Ghidra scripts are supported; Python/Jython script support is disabled.");
+        }
         if (timeoutSeconds <= 0 || timeoutSeconds > MAX_SCRIPT_TIMEOUT_SECONDS) {
             return Response.err("timeout_seconds must be between 1 and " + MAX_SCRIPT_TIMEOUT_SECONDS + " seconds");
         }
@@ -3639,7 +3644,7 @@ public class ProgramScriptService {
                 System.getProperty("user.home") + "/ghidra_scripts",
             };
 
-            String[] extensions = hasExtension ? new String[]{""} : new String[]{".java", ".py", ""};
+            String[] extensions = hasExtension ? new String[]{""} : new String[]{".java", ""};
 
             for (String dirPath : searchDirs) {
                 if (dirPath == null) continue;

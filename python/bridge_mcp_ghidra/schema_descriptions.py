@@ -439,35 +439,33 @@ DESCRIPTION_REPLACEMENTS = (
         "graph with block/op iteration and SSA info.",
     ),
     (
-        "Run an existing Ghidra script file by filename or path. The file must already exist on the Ghidra host; "
+        "Run an existing Java Ghidra script file by filename or path. The file must already exist on the Ghidra host; "
         "use run_script_inline for temporary new source. Returns JSON {success, script_name, script_path, "
         "execution_time_seconds, output_captured, console_output?}; Requires GHIDRA_MCP_ALLOW_SCRIPTS=1. "
         "dry_run=true is rejected without execution.",
-        "Run an existing host script by filename/path; for new source use run_script_inline. Returns JSON "
+        "Run an existing host Java script by filename/path; for new source use run_script_inline. Returns JSON "
         "execution metadata/output; failures include output. Cached build banners may concern other files; check "
         "this script diagnostics/success. Requires GHIDRA_MCP_ALLOW_SCRIPTS=1; rejects dry_run=true.",
     ),
     (
-        "Run an existing Ghidra script file by filename or path. The file must already exist on the Ghidra host; "
+        "Run an existing Java Ghidra script file by filename or path. The file must already exist on the Ghidra host; "
         "use run_script_inline for new source. Returns JSON {success, script_name, script_path, "
         "execution_time_seconds, output_captured, console_output?}; failures always include output. Cached "
         "'failing in previous build(s)' banners may refer to other files; check success and diagnostics for this "
         "script. Requires GHIDRA_MCP_ALLOW_SCRIPTS=1. dry_run=true is rejected without execution.",
-        "Run an existing host script by filename/path; for new source use run_script_inline. Returns JSON "
+        "Run an existing host Java script by filename/path; for new source use run_script_inline. Returns JSON "
         "execution metadata/output; failures include output. Cached build banners may concern other files; check "
         "this script diagnostics/success. Requires GHIDRA_MCP_ALLOW_SCRIPTS=1; rejects dry_run=true.",
     ),
     (
-        "Compile and run temporary Java GhidraScript code. Source is written under the Ghidra process's "
-        "~/ghidra_scripts and deleted after success; failed sources may remain until the next script run. To "
-        "reuse, save a separate script file and call run_ghidra_script. Returns JSON {success, console_output, "
-        "error?}; compile errors prevent execution. Cached 'failing in previous build(s)' banners may refer to "
-        "other files; check success and diagnostics for this script. Requires GHIDRA_MCP_ALLOW_SCRIPTS=1. "
-        "dry_run=true is rejected without execution.",
-        "Compile/run temporary Java GhidraScript under host ~/ghidra_scripts; deleted on success, failures may "
-        "persist until next run. Returns JSON success/console_output/error; compile errors prevent execution. "
-        "Cached build banners may concern other files. Requires GHIDRA_MCP_ALLOW_SCRIPTS=1; rejects dry_run=true."
-        " For reuse save a file and use run_ghidra_script.",
+        "Compile and run temporary Java GhidraScript code (Java only; Python/Jython is disabled). Source "
+        "is compiled in an isolated temporary bundle and discarded after success or failure. To reuse, "
+        "save a separate script file and call run_ghidra_script. Returns JSON {success, console_output, "
+        "error?}; compile errors prevent execution. Requires GHIDRA_MCP_ALLOW_SCRIPTS=1. dry_run=true is "
+        "rejected without execution.",
+        "Compile&run Java only in an isolated bundle; discarded after each run. "
+        "Requires GHIDRA_MCP_ALLOW_SCRIPTS=1; rejects dry_run=true. For reuse write a file in ~/ghidra_scripts then use "
+        "run_ghidra_script",
     ),
     (
         "Comma-separated subset: signature, classification, return_type, entry_point, body_start, body_end, "

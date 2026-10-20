@@ -97,8 +97,8 @@ public class ListGhidraScriptsOfflineTest extends TestCase {
 
         // Discovery is restricted to the user scripts directory.
         List<Map<String, Object>> mine = mine(data);
-        assertEquals(2, mine.size());
-        assertEquals(2, ((Number) data.get("count")).intValue());
+        assertEquals(1, mine.size());
+        assertEquals(1, ((Number) data.get("count")).intValue());
         assertEquals(List.of(scriptsDir.getAbsolutePath()), data.get("searched_dirs"));
     }
 
@@ -123,7 +123,7 @@ public class ListGhidraScriptsOfflineTest extends TestCase {
         // Unique prefix ZqFind/ZqUnrelated avoids colliding with real scripts elsewhere.
         List<Map<String, Object>> mine = mine(okData(svc.listGhidraScripts("ZQFIND")));
 
-        assertEquals(2, mine.size());
+        assertEquals(1, mine.size());
         for (Map<String, Object> e : mine) {
             assertTrue(((String) e.get("name")).toLowerCase().contains("zqfind"));
         }
@@ -143,6 +143,7 @@ public class ListGhidraScriptsOfflineTest extends TestCase {
         writeScript("Real.java", "public class Real {}");
         writeScript("notes.txt", "not a script");
         writeScript("README.md", "nope");
+        writeScript("Disabled.py", "raise Exception('must not run')");
 
         List<Map<String, Object>> mine = mine(okData(svc.listGhidraScripts("")));
 

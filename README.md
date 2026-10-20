@@ -114,10 +114,10 @@ v5.0 moves conventions from "things to remember" into the tool layer, where they
 > Server at 12.1, 12.0.5, or a newer compatible version. Upgrade the
 > server before using this plugin from a 12.1 client.
 >
-> Ghidra 12.1.4 ships Jython as an optional extension. Java scripts work
-> by default, but `.py` scripts in `ghidra_scripts/` require installing
-> the Jython extension from **File > Install Extensions** and restarting
-> Ghidra.
+> MCP script execution is Java-only in both the GUI extension and headless server.
+> `run_script_inline` accepts Java statements or a Java `GhidraScript` class;
+> `run_ghidra_script` runs existing `.java` files. Python/Jython scripts are disabled.
+> The Python MCP bridge remains supported.
 
 ### Installation
 
@@ -892,17 +892,13 @@ again even with a URL configured.
 4. If a script or prompt calls a tool that worked before 7.0.0 (`decompile_function`, `list_functions`, `search_functions`, `get_function_callers`, `list_imports`, ...), it was consolidated: the [7.0.0 migration guide](docs/project-management/MIGRATION_7.0.0_TOOL_CONSOLIDATION.md) names the replacement for every removed tool
 5. Some routes exist on only one server: `/debugger/*` and `/tool/*` are GUI-only, and `/create_project`, `/close_project`, `/delete_project` and `/list_projects` are headless-only (see the API Reference)
 
-### Python Ghidra scripts fail with "No script provider found"
+### Python/Jython script execution is disabled
 
-**Cause:** In Ghidra 12.1.4, Jython support is no longer enabled by
-default. `.py` scripts need the bundled Jython extension; Python 3
-scripts should use PyGhidra instead of the Ghidra Script Manager.
-
-**Solution:**
-
-1. In the Ghidra Front End, open **File > Install Extensions**.
-2. Check **Jython**, restart Ghidra, then refresh Script Manager.
-3. For new automation, prefer Java Ghidra scripts or PyGhidra.
+Both MCP script endpoints execute Java only. Use Java statements or a full
+`GhidraScript` class with `run_script_inline`, or save a `.java` file for
+`run_ghidra_script`. Filename lookup does not try `.py`, and `list_scripts`
+returns only Java sources. Installing Jython does not enable Python execution
+through MCP. Docker images no longer install the optional Jython extension.
 
 ### Extension not appearing in Install Extensions
 
@@ -967,7 +963,7 @@ write the path with forward slashes.
 - `list_open_programs` - List open programs
 - `list_project_files` - List project files
 - `list_properties` - List (address, value) entries stored in a property map, with pagination
-- `list_scripts` - List .java and .py script files on the Ghidra host, without recursion
+- `list_scripts` - List Java (.java) script files on the Ghidra host, without recursion
 - `open_program` - Open program from project
 - `read_memory` - Read raw memory
 - `reanalyze` - Trigger full auto-analysis on a program

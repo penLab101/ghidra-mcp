@@ -18,7 +18,7 @@ from bridge_mcp_ghidra import schema, server, static_tools  # noqa: F401
         ("close_program", ("save=true", "refuses", "save=false discards")),
         (
             "run_script_inline",
-            ("failures may persist", "compile errors prevent", "GHIDRA_MCP_ALLOW_SCRIPTS=1", "rejects dry_run=true"),
+            ("Python/Jython disabled", "discarded after success or failure", "compile errors prevent", "GHIDRA_MCP_ALLOW_SCRIPTS=1", "rejects dry_run=true"),
         ),
     ],
 )

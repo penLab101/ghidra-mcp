@@ -54,16 +54,14 @@ import ghidra.app.script.GhidraScript;
 import ghidra.program.model.listing.*;
 ```
 
-### Python Scripts (Jython)
+### MCP script execution
 
-Ghidra uses Jython 2.7, not Python 3. In Ghidra 12.1, Jython is shipped
-as an optional extension and is not enabled by default. Install it from
-**File > Install Extensions**, restart Ghidra, then refresh Script Manager
-before running `.py` scripts. Scripts must use:
-
-```python
-from ghidra.app.script import GhidraScript
-```
+The GUI extension and headless MCP server execute Java scripts only.
+`run_script_inline` accepts Java statements or a complete `GhidraScript` class
+and discards its isolated temporary bundle after execution. Use
+`run_ghidra_script` for persistent `.java` files. Python/Jython scripts are
+excluded from listing and filename resolution, and cannot be run through
+these MCP endpoints. The external Python MCP bridge is unaffected.
 
 ## Difference from /scripts Directory
 

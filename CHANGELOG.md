@@ -32,6 +32,21 @@ the 235-tool schema recording); the figures above are the current ones.
 > the *cause* of a change here (`uv.lock`'s stale dependency group, the
 > release workflows' dangling paths, the benchmark fixture that left with it).
 
+### Changed — Java-only MCP script execution
+
+- Disabled Python/Jython script execution through MCP, removed `.py` filename
+  discovery, and restricted `list_scripts` to Java sources. Persistent Java
+  script execution remains supported. Docker no longer installs Jython; endpoint
+  help and setup documentation now state the Java-only contract.
+
+### Fixed — Isolated inline script compilation
+
+- `run_script_inline` compiles each invocation in its own temporary source bundle,
+  executes the loaded instance once, and discards sources, compiled cache and
+  bundle registration after success or failure. Inline runs no longer rebuild
+  `~/ghidra_scripts` or replay unrelated compilation errors. Persistent
+  `run_ghidra_script` behavior is unchanged.
+
 ### Fixed — Switching GUI programs
 
 - `switch_program` now shows a cached target in an existing CodeBrowser and
