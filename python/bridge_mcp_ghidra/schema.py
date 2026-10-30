@@ -99,7 +99,7 @@ HIDE_OPTIONAL_TOOL_NAMES = {
     "extract_iocs_with_context",
     "find_anti_analysis_techniques",
     "import_program",
-    "close_program",
+    # "close_program",
     "find_similar_functions",
     "find_undocumented_by_string",
     # "open_program",
